@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.venv/
+env/
+venv/
+.env
+# Project
+data/cache/*
+!data/cache/.gitkeep
+credentials/*
+!credentials/.gitkeep
+token.json
+# VS Code
+.vscode/
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,28 @@
+# Run once with beautiful table display (recommended)
+python -m src.scraper.main --once
+
+
+
+# 1. Run once with table display (default behavior)
+python -m src.scraper.main --once
+
+# 2. Run once without showing the table
+python -m src.scraper.main --once --no-table
+
+# 3. Display existing JSON schedule in beautiful table format
+python -m src.scraper.main --show-json data/cache/schedule_2025-10-06.json
+
+# 4. Check system health and diagnostics
+python -m src.scraper.main --health-check
+
+# 5. Show current configuration settings
+python -m src.scraper.main --config-info
+
+# 6. Run with debug mode for troubleshooting
+python -m src.scraper.main --once --debug
+
+# 7. Clear cache before running
+python -m src.scraper.main --once --cache-clear
+
+# 8. Start the nightly scheduler (runs continuously)
+python -m src.scraper.main --run-scheduler
