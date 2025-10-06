@@ -9,14 +9,48 @@ __pycache__/
 env/
 venv/
 .env
+
 # Project
 data/cache/*
 !data/cache/.gitkeep
 credentials/*
 !credentials/.gitkeep
 token.json
-# VS Code
+
+# Frontend
+node_modules/
+build/
+dist/
+.npm
+.eslintcache
+*.tsbuildinfo
+
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+
 # OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Railway
+.railway/
+
+# Docker
+.dockerignore
 .DS_Store
 Thumbs.db

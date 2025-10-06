@@ -52,93 +52,96 @@ def run_once(user_email: str = "me", show_table: bool = False) -> Dict:
     # Import here to ensure config is loaded first
     from .config import settings
     
-    local_tz = tz.gettz(settings.tz)
-    now_local = datetime.now(tz=local_tz)
-    for_day_name = _target_day_name(now_local)
+    try:
+        local_tz = tz.gettz(settings.tz)
+        now_local = datetime.now(tz=local_tz)
+        for_day_name = _target_day_name(now_local)
 
-    query = _build_query(settings.gmail_query_base, for_day_name, settings.newer_than_days)
+        query = _build_query(settings.gmail_query_base, for_day_name, settings.newer_than_days)
 
-    LOGGER.info("[bold]Looking for:[/bold] %s  (local: %s)", for_day_name, now_local.strftime("%Y-%m-%d %H:%M"))
-    LOGGER.info("[bold]Gmail query:[/bold] %s", query)
-    LOGGER.info("[bold]Semesters filter:[/bold] %s", settings.allowed_semesters)
-    LOGGER.info("[bold]Settings timezone:[/bold] %s", settings.tz)
-    LOGGER.info("[bold]Newer than days:[/bold] %s", settings.newer_than_days)
+        LOGGER.info("Looking for: %s  (local: %s)", for_day_name, now_local.strftime("%Y-%m-%d %H:%M"))
+        LOGGER.info("Gmail query: %s", query)
 
-    creds = get_credentials()
-    service = build_service(creds)
+        creds = get_credentials()
+        service = build_service(creds)
 
-    msgs = list_messages(service, user_id=user_email, query=query, max_results=5)
-    if not msgs:
-        LOGGER.warning("No messages matched the query.")
+        msgs = list_messages(service, user_id=user_email, query=query, max_results=5)
+        if not msgs:
+            LOGGER.warning("No messages matched the query.")
+            doc = {
+                "for_day": for_day_name,
+                "for_date": now_local.date().isoformat(),
+                "query": query,
+                "message_id": None,
+                "items": [],
+                "semesters": settings.allowed_semesters,
+                "summary": {
+                    "total_items": 0,
+                    "semester_breakdown": {},
+                    "unique_courses": 0,
+                    "unique_faculty": 0,
+                }
+            }
+            _save_json(doc)
+            return {"success": True, "data": doc, "message": "No messages found for today"}
+
+        msg_id = msgs[0]["id"]
+        html = get_message_html(service, user_id=user_email, msg_id=msg_id) or ""
+        
+        LOGGER.info(f"Message ID: {msg_id}")
+        LOGGER.info(f"HTML length: {len(html)} characters")
+        if html:
+            # Show first 500 characters of HTML for debugging (commented out to reduce noise)
+            # preview = html[:500].replace('\n', '\\n').replace('\r', '\\r')
+            # LOGGER.info(f"HTML preview: {preview}...")
+            pass
+        else:
+            LOGGER.warning("HTML content is empty or None")
+
+        items = parse_schedule_html(html, settings.allowed_semesters)
+
+        # Create summary statistics
+        semester_counts = {}
+        for item in items:
+            sem = item.get('semester', 'Unknown')
+            semester_counts[sem] = semester_counts.get(sem, 0) + 1
+
         doc = {
             "for_day": for_day_name,
             "for_date": now_local.date().isoformat(),
             "query": query,
-            "message_id": None,
-            "items": [],
+            "message_id": msg_id,
+            "items": items,
             "semesters": settings.allowed_semesters,
             "summary": {
-                "total_items": 0,
-                "semester_breakdown": {},
-                "unique_courses": 0,
-                "unique_faculty": 0,
+                "total_items": len(items),
+                "semester_breakdown": semester_counts,
+                "unique_courses": len(set(item.get('course') for item in items if item.get('course'))),
+                "unique_faculty": len(set(item.get('faculty') for item in items if item.get('faculty'))),
             }
         }
-        _save_json(doc)
-        return doc
-
-    msg_id = msgs[0]["id"]
-    html = get_message_html(service, user_id=user_email, msg_id=msg_id) or ""
+        saved = _save_json(doc)
+        LOGGER.info("Saved parsed schedule → %s", saved)
+        
+        # Log summary
+        summary = doc.get("summary", {})
+        LOGGER.info(f"Summary: {summary['total_items']} total items found")
+        if summary.get("semester_breakdown"):
+            for sem, count in summary["semester_breakdown"].items():
+                LOGGER.info(f"  • {sem}: {count} classes")
+        LOGGER.info(f"  • {summary['unique_courses']} unique courses, {summary['unique_faculty']} faculty members")
+        
+        # Display table if requested
+        if show_table:
+            from ..utils.table_formatter import format_schedule_json
+            print()  # Add some spacing
+            format_schedule_json(saved)
+        
+        return {"success": True, "data": doc, "message": f"Successfully found {len(items)} items"}
     
-    LOGGER.info(f"Message ID: {msg_id}")
-    LOGGER.info(f"HTML length: {len(html)} characters")
-    if html:
-        # Show first 500 characters of HTML for debugging
-        preview = html[:500].replace('\n', '\\n').replace('\r', '\\r')
-        LOGGER.info(f"HTML preview: {preview}...")
-    else:
-        LOGGER.warning("HTML content is empty or None")
-
-    items = parse_schedule_html(html, settings.allowed_semesters)
-
-    # Create summary statistics
-    semester_counts = {}
-    for item in items:
-        sem = item.get('semester', 'Unknown')
-        semester_counts[sem] = semester_counts.get(sem, 0) + 1
-
-    doc = {
-        "for_day": for_day_name,
-        "for_date": now_local.date().isoformat(),
-        "query": query,
-        "message_id": msg_id,
-        "items": items,
-        "semesters": settings.allowed_semesters,
-        "summary": {
-            "total_items": len(items),
-            "semester_breakdown": semester_counts,
-            "unique_courses": len(set(item.get('course') for item in items if item.get('course'))),
-            "unique_faculty": len(set(item.get('faculty') for item in items if item.get('faculty'))),
-        }
-    }
-    saved = _save_json(doc)
-    LOGGER.info("Saved parsed schedule → %s", saved)
-    
-    # Log summary
-    summary = doc.get("summary", {})
-    LOGGER.info(f"[bold green]Summary:[/bold green] {summary['total_items']} total items found")
-    if summary.get("semester_breakdown"):
-        for sem, count in summary["semester_breakdown"].items():
-            LOGGER.info(f"  • {sem}: {count} classes")
-    LOGGER.info(f"  • {summary['unique_courses']} unique courses, {summary['unique_faculty']} faculty members")
-    
-    # Display table if requested
-    if show_table:
-        from ..utils.table_formatter import format_schedule_json
-        print()  # Add some spacing
-        format_schedule_json(saved)
-    
-    return doc
+    except Exception as e:
+        LOGGER.error(f"Error in run_once: {e}")
+        return {"success": False, "error": str(e)}
 
 def start_scheduler() -> BackgroundScheduler:
     from .config import settings

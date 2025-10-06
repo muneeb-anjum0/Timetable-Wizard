@@ -123,7 +123,7 @@ def _display_header(console: Console, data: Dict[str, Any]) -> None:
     
     # Create title panel
     title = Panel(
-        Align.center("[bold blue]📅 Class Schedule[/bold blue]"),
+        Align.center("[bold blue]Class Schedule[/bold blue]"),
         style="bold",
         border_style="blue"
     )
@@ -147,7 +147,7 @@ def _display_header(console: Console, data: Dict[str, Any]) -> None:
     # Day and Date panel
     panels.append(Panel(
         Align.center(info_text),
-        title="📆 Schedule Date",
+        title="Schedule Date",
         border_style="blue",
         width=35
     ))
@@ -155,7 +155,7 @@ def _display_header(console: Console, data: Dict[str, Any]) -> None:
     # Message ID panel
     panels.append(Panel(
         Align.center(str(message_id)[:16] if message_id != 'Unknown' else message_id),
-        title="📧 Message ID",
+        title="Message ID",
         border_style="green",
         width=25
     ))
@@ -179,9 +179,9 @@ def _display_header(console: Console, data: Dict[str, Any]) -> None:
     
     panels.append(Panel(
         semester_text,
-        title="🎓 Filtered Semesters",
+        title="Filtered Semesters",
         border_style="magenta",
-        width=35
+        width=32
     ))
     
     # Display panels side by side
@@ -200,7 +200,8 @@ def _display_schedule_table(console: Console, items: List[Dict[str, Any]]) -> No
         header_style="bold magenta",
         border_style="blue",
         row_styles=["none", "dim"],
-        expand=True
+        expand=True,
+        show_lines=True  # Add horizontal lines after every row
     )
     
     # Add columns with specific widths and styles
@@ -251,20 +252,38 @@ def _display_schedule_table(console: Console, items: List[Dict[str, Any]]) -> No
             time = str(item.get('time', 'N/A') or 'N/A')
             room = str(item.get('room', 'N/A') or 'N/A')
             campus = str(item.get('campus', 'N/A') or 'N/A')
+            is_cancelled = item.get('is_cancelled', False)
             
-            # Truncate long course titles for better display
-            if len(title) > 30:
-                title = title[:27] + "..."
+            # Wrap long course titles instead of truncating
+            title_text = Text(title)
+            title_text.overflow = "fold"  # Enable text wrapping
+            
+            # Apply special styling for cancelled classes
+            if is_cancelled or room.lower() == 'cancelled':
+                sr_no_text = Text(sr_no, style="dim red")
+                course_text = Text(course, style="dim red")
+                faculty_text = Text(faculty, style="dim red")
+                time_text = Text(time, style="dim red") 
+                room_text = Text("[CANCELLED]", style="bold red")
+                campus_text = Text(campus, style="dim red")
+                title_text.stylize("dim red")
+            else:
+                sr_no_text = sr_no
+                course_text = course
+                faculty_text = faculty
+                time_text = time
+                room_text = room
+                campus_text = campus
             
             # Add row to table
             table.add_row(
-                sr_no,
-                course,
-                title,
-                faculty,
-                time,
-                room,
-                campus
+                sr_no_text,
+                course_text,
+                title_text,
+                faculty_text,
+                time_text,
+                room_text,
+                campus_text
             )
     
     console.print(table)

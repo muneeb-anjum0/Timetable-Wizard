@@ -1,0 +1,23 @@
+# Backend Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY src/ ./src/
+COPY backend/app.py .
+COPY credentials/ ./credentials/
+COPY data/ ./data/
+
+# Create necessary directories
+RUN mkdir -p data/cache
+
+# Expose port
+EXPOSE 5000
+
+# Run the backend
+CMD ["python", "app.py"]

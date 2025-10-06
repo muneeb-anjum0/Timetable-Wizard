@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Activate venv and (later) run the scheduler
+# Activate virtual environment (if present) and run the scheduler once.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_DIR"
 if [ -d ".venv" ]; then
+  # shellcheck source=/dev/null
   source .venv/bin/activate
 fi
-# Placeholder: the actual run command will go here later, e.g.:
-# python -m src.scraper.main --run-scheduler
-echo "Scheduler placeholder. Implementation will be added later."
+# Run the Python module; forward any extra args.
+python -m src.scraper.main --once "$@"
+EXITCODE=$?
+exit $EXITCODE
