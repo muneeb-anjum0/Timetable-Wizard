@@ -1,3 +1,8 @@
+PS C:\Users\MuneebAnjum\Desktop\Timetable Wizard> npm start
+
+PS C:\Users\MuneebAnjum\Desktop\Timetable Wizard> & "C:/Users/MuneebAnjum/Desktop/Timetable Wizard/.venv/Scripts/python.exe" backend/app.py
+
+
 # Run once with beautiful table display (recommended)
 python -m src.scraper.main --once
 

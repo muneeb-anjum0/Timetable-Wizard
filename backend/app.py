@@ -14,7 +14,13 @@ from flask_cors import CORS
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 app = Flask(__name__)
-CORS(app, origins=['http://localhost:3000'], methods=['GET', 'POST', 'OPTIONS'])
+# CORS configuration to allow network access
+CORS(app, origins=[
+    "http://localhost:3000",
+    "http://127.0.0.1:3000", 
+    "http://192.168.100.250:3000",  # Your network IP
+    "http://192.168.100.250:3000",  # Ensure network IP is allowed
+], supports_credentials=True, allow_headers=['Content-Type', 'Authorization'])
 
 # Setup basic logging
 logging.basicConfig(level=logging.INFO)
@@ -215,4 +221,8 @@ def get_status():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    print(f"Starting server on 0.0.0.0:{port}")
+    print(f"Access URLs:")
+    print(f"  Local: http://localhost:{port}")
+    print(f"  Network: http://192.168.100.250:{port}")
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)

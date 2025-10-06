@@ -1,7 +1,22 @@
 import axios, { AxiosResponse } from 'axios';
 import { ApiResponse, TimetableData, ConfigData, StatusData } from '../types/api';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+// Dynamic API base URL - uses the same host as the frontend but port 5000
+const getApiBaseUrl = () => {
+  const hostname = window.location.hostname;
+  
+  // Always use the same hostname but with port 5000 for the API
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+  
+  // For network access (like 192.168.x.x), use the same IP with port 5000
+  return `http://${hostname}:5000`;
+};
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || getApiBaseUrl();
+
+console.log('API Base URL:', API_BASE_URL); // Debug log
 
 const api = axios.create({
   baseURL: API_BASE_URL,

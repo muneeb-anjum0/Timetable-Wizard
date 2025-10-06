@@ -87,77 +87,142 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Course
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-xs">
-              Course Title
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Faculty
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Room
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Time
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Semester
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Campus
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+    <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+      {/* Mobile Card View (hidden on desktop) */}
+      <div className="block md:hidden">
+        <div className="divide-y divide-gray-200">
           {sortedSemesters.map((semester, semesterIndex) => (
-            <React.Fragment key={semester}>
-              {/* Semester Header Row */}
-              <tr className="bg-blue-50 border-t-2 border-blue-200">
-                <td colSpan={7} className="px-6 py-4 text-sm font-semibold text-blue-800 bg-blue-100">
+            <div key={semester} className="bg-white">
+              {/* Mobile Semester Header */}
+              <div className="bg-blue-50 px-4 py-3 border-l-4 border-blue-400">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <span className="mr-2">🏛️</span>
-                    {semester} ({grouped[semester].length} classes)
+                    <span className="text-lg mr-2">📚</span>
+                    <div>
+                      <h3 className="text-sm font-semibold text-blue-800">{semester}</h3>
+                      <p className="text-xs text-blue-600">{grouped[semester].length} classes</p>
+                    </div>
                   </div>
-                </td>
-              </tr>
-              {/* Classes for this semester */}
-              {grouped[semester].map((item, itemIndex) => (
-                <tr key={`${semester}-${itemIndex}`} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {item.course || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
-                    <div className="break-words leading-5">
-                      {item.course_title || '-'}
+                </div>
+              </div>
+              
+              {/* Mobile Class Cards */}
+              <div className="divide-y divide-gray-100">
+                {grouped[semester].map((item, itemIndex) => (
+                  <div key={`${semester}-${itemIndex}`} className="p-4 hover:bg-gray-50">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-medium text-gray-900 truncate">
+                            {item.course || '-'}
+                          </h4>
+                          <p className="text-xs text-gray-600 mt-1 break-words">
+                            {item.course_title || '-'}
+                          </p>
+                        </div>
+                        <div className="ml-2 flex-shrink-0">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            {item.room || '-'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+                        <div className="flex items-center">
+                          <span className="mr-1">👨‍🏫</span>
+                          <span className="truncate">{item.faculty || '-'}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="mr-1">⏰</span>
+                          <span>{item.time || '-'}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="mr-1">🏫</span>
+                          <span className="truncate">{item.campus || '-'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop Table View (hidden on mobile) */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Course
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-xs">
+                Course Title
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Faculty
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Room
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Time
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Semester
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Campus
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {sortedSemesters.map((semester, semesterIndex) => (
+              <React.Fragment key={semester}>
+                {/* Desktop Semester Header Row */}
+                <tr className="bg-blue-50 border-t-2 border-blue-200">
+                  <td colSpan={7} className="px-6 py-4 text-sm font-semibold text-blue-800 bg-blue-100">
+                    <div className="flex items-center">
+                      <span className="mr-2">📚</span>
+                      {semester} ({grouped[semester].length} classes)
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.faculty || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.room || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.time || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.semester || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.campus || '-'}
-                  </td>
                 </tr>
-              ))}
-            </React.Fragment>
-          ))}
-        </tbody>
-      </table>
+                {/* Desktop Classes for this semester */}
+                {grouped[semester].map((item, itemIndex) => (
+                  <tr key={`${semester}-${itemIndex}`} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {item.course || '-'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
+                      <div className="break-words leading-5">
+                        {item.course_title || '-'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.faculty || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.room || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.time || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.semester || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.campus || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

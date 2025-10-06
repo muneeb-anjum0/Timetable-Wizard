@@ -132,45 +132,48 @@ function App() {
       {/* Header */}
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Calendar className="h-8 w-8 text-blue-600 mr-3" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 sm:py-6">
+            <div className="flex items-center mb-3 sm:mb-0">
+              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mr-2 sm:mr-3" />
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">TimeTable Scraper</h1>
-                <p className="text-sm text-gray-500">University Class Schedule Dashboard</p>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">TimeTable Scraper</h1>
+                <p className="text-xs sm:text-sm text-gray-500">University Class Schedule Dashboard</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-500">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+              <div className="text-xs sm:text-sm text-gray-500">
                 Last updated: {formatLastUpdate(lastUpdate)}
               </div>
-              <button
-                onClick={() => setShowSemesterManager(true)}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <Settings className="h-4 w-4 mr-2" />
-                Semesters ({config?.semester_filter?.length || 0})
-              </button>
-              <button
-                onClick={runScraper}
-                disabled={isLoading}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                {isLoading ? 'Scraping...' : 'Run Scraper'}
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setShowSemesterManager(true)}
+                  className="inline-flex items-center px-2 sm:px-3 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Semesters </span>({config?.semester_filter?.length || 0})
+                </button>
+                <button
+                  onClick={runScraper}
+                  disabled={isLoading}
+                  className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">{isLoading ? 'Scraping...' : 'Run Scraper'}</span>
+                  <span className="sm:hidden">{isLoading ? '⏳' : '🔄'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
+      <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
+        <div className="space-y-4 sm:space-y-6">
           
           {/* Status Indicator */}
           {message && (
-            <div className="mb-6">
+            <div>
               <StatusIndicator 
                 status={status === 'loading' ? 'loading' : status === 'success' ? 'success' : status === 'warning' ? 'warning' : 'error'} 
                 message={message} 
@@ -180,20 +183,20 @@ function App() {
 
           {/* Summary Stats */}
           {timetableData && (
-            <div className="mb-8">
+            <div>
               <SummaryStats data={timetableData} />
             </div>
           )}
 
           {/* Timetable */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
-            <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+          <div className="bg-white shadow overflow-hidden rounded-md sm:rounded-lg">
+            <div className="px-3 sm:px-4 py-4 sm:py-5 lg:px-6 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div className="mb-2 sm:mb-0">
+                  <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
                     Class Schedule
                   </h3>
-                  <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                  <p className="mt-1 max-w-2xl text-xs sm:text-sm text-gray-500">
                     {timetableData 
                       ? `${timetableData.for_day} - ${new Date(timetableData.for_date).toLocaleDateString()}`
                       : 'No data available'
@@ -201,22 +204,22 @@ function App() {
                   </p>
                 </div>
                 <div className="flex items-center">
-                  <Activity className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-500">
+                  <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 mr-2" />
+                  <span className="text-xs sm:text-sm text-gray-500">
                     {timetableData?.items?.length || 0} classes
                   </span>
                 </div>
               </div>
             </div>
             
-            <div className="px-4 py-5 sm:p-6">
+            <div className="p-0">
               {timetableData ? (
                 <TimetableTable items={timetableData.items} />
               ) : (
-                <div className="text-center py-12">
-                  <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+                <div className="text-center py-8 sm:py-12 px-4">
+                  <Calendar className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900">No schedule data</h3>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <p className="mt-1 text-xs sm:text-sm text-gray-500">
                     Click "Run Scraper" to fetch the latest schedule from your email.
                   </p>
                 </div>
@@ -226,21 +229,21 @@ function App() {
 
           {/* Semester Breakdown */}
           {timetableData && timetableData.summary && timetableData.summary.semester_breakdown && Object.keys(timetableData.summary.semester_breakdown).length > 0 && (
-            <div className="mt-8 bg-white shadow overflow-hidden sm:rounded-md">
-              <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
+            <div className="bg-white shadow overflow-hidden rounded-md sm:rounded-lg">
+              <div className="px-3 sm:px-4 py-4 sm:py-5 lg:px-6 border-b border-gray-200">
+                <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
                   Semester Breakdown
                 </h3>
-                <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                <p className="mt-1 max-w-2xl text-xs sm:text-sm text-gray-500">
                   Classes grouped by semester
                 </p>
               </div>
-              <div className="px-4 py-5 sm:p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="px-3 sm:px-4 py-4 sm:py-5 lg:px-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {Object.entries(timetableData.summary.semester_breakdown).map(([semester, count]) => (
-                    <div key={semester} className="bg-gray-50 p-4 rounded-lg">
-                      <div className="text-sm font-medium text-gray-900">{semester}</div>
-                      <div className="text-2xl font-bold text-blue-600">{count}</div>
+                    <div key={semester} className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+                      <div className="text-xs sm:text-sm font-medium text-gray-900">{semester}</div>
+                      <div className="text-xl sm:text-2xl font-bold text-blue-600">{count}</div>
                       <div className="text-xs text-gray-500">classes</div>
                     </div>
                   ))}
