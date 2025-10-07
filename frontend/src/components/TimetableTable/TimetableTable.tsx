@@ -97,7 +97,7 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
               <div className="bg-blue-50 px-4 py-3 border-l-4 border-blue-400">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <span className="text-lg mr-2">📚</span>
+                    <span className="text-lg mr-2"></span>
                     <div>
                       <h3 className="text-sm font-semibold text-blue-800">{semester}</h3>
                       <p className="text-xs text-blue-600">{grouped[semester].length} classes</p>
@@ -185,7 +185,7 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
                 <tr className="bg-blue-50 border-t-2 border-blue-200">
                   <td colSpan={7} className="px-6 py-4 text-sm font-semibold text-blue-800 bg-blue-100">
                     <div className="flex items-center">
-                      <span className="mr-2">📚</span>
+                      <span className="mr-2"></span>
                       {semester} ({grouped[semester].length} classes)
                     </div>
                   </td>

@@ -12,9 +12,9 @@ LOGGER = logging.getLogger(__name__)
 # Find and load .env file with debug info
 env_file = find_dotenv(usecwd=True)
 if env_file:
-    LOGGER.info(f"Loading .env from: {env_file}")
+    LOGGER.debug(f"Loading .env from: {env_file}")
     loaded = load_dotenv(env_file, override=True)
-    LOGGER.info(f"Environment loaded successfully: {loaded}")
+    LOGGER.debug(f"Environment loaded successfully: {loaded}")
 else:
     LOGGER.warning("No .env file found")
 
@@ -63,7 +63,7 @@ def _parse_semesters_direct():
         if sem:
             semesters.append(sem)
     
-    LOGGER.info(f"Loaded {len(semesters)} semester filter(s): {semesters}")
+    LOGGER.debug(f"Loaded {len(semesters)} semester filter(s): {semesters}")
     return semesters
 
 settings = Settings()

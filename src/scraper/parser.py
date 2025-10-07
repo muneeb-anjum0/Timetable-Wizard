@@ -414,9 +414,9 @@ def parse_schedule_html(html: str, semesters: List[str]) -> List[Dict]:
         class_section = pick("class_section") or ""
         class_tok = _tok(class_section)
         
-        logger.debug(f"Row {processed_rows}: class_section='{class_section}', tokenized='{class_tok}'")
-        logger.debug(f"Row {processed_rows}: cells={cells[:9]}")
-
+        # Debug: Always log what was found in this row
+        logger.info(f"Row {processed_rows}: class_section='{class_section}', tokenized='{class_tok}'")
+        
         keep = False
         match_reason = ""
         
@@ -473,6 +473,15 @@ def parse_schedule_html(html: str, semesters: List[str]) -> List[Dict]:
         results.append(rec)
 
     logger.info(f"Parsing complete: processed {processed_rows} rows, kept {len(results)} items")
+    
+    # Debug: Show all unique semesters found in the email
+    all_semesters_found = set()
+    for rec in results:
+        if rec.get('semester'):
+            all_semesters_found.add(rec['semester'])
+    
+    logger.info(f"All unique semesters found in email: {sorted(all_semesters_found)}")
+    
     if semesters:
         logger.info(f"Semester filters applied: {semesters}")
     else:

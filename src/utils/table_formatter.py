@@ -112,6 +112,66 @@ def format_schedule_json(json_file_path: str | Path) -> None:
         print(f"❌ Error: {e}")
 
 
+def format_schedule_data(data: Dict[str, Any]) -> None:
+    """
+    Display schedule data in a beautiful table format.
+    
+    Args:
+        data: Dictionary containing schedule data with 'items' and other metadata
+    """
+    try:
+        # Validate data structure
+        if not isinstance(data, dict):
+            raise ValueError("Data must be a dictionary")
+            
+        # Create Rich console with error handling
+        try:
+            console = Console()
+        except Exception as e:
+            print(f"❌ Error: Could not create console: {e}")
+            return
+        
+        # Validate required data
+        items = data.get('items', [])
+        if not isinstance(items, list):
+            console.print("[yellow]⚠️  Warning: 'items' field is not a list or is missing.[/yellow]")
+            items = []
+        
+        # Display with enhanced error recovery
+        try:
+            _display_header(console, data)
+        except Exception as e:
+            console.print(f"[red]❌ Error displaying header: {e}[/red]")
+            
+        try:
+            _display_schedule_table(console, items)
+        except Exception as e:
+            console.print(f"[red]❌ Error displaying table: {e}[/red]")
+            # Fallback to simple display
+            console.print(f"\n[dim]Raw data: {len(items)} items found[/dim]")
+            for i, item in enumerate(items[:5]):  # Show first 5 items
+                course = item.get('course', 'N/A')
+                title = item.get('course_title', 'N/A')
+                console.print(f"  {i+1}. {course}: {title}")
+            if len(items) > 5:
+                console.print(f"  ... and {len(items) - 5} more items")
+            
+        try:
+            _display_summary(console, data)
+        except Exception as e:
+            console.print(f"[red]❌ Error displaying summary: {e}[/red]")
+            
+        # Display data quality metrics if available
+        if 'data_quality' in data:
+            try:
+                _display_data_quality(console, data['data_quality'])
+            except Exception as e:
+                console.print(f"[red]❌ Error displaying data quality: {e}[/red]")
+                
+    except Exception as e:
+        print(f"❌ Error: {e}")
+
+
 def _display_header(console: Console, data: Dict[str, Any]) -> None:
     """Display header information with schedule details."""
     

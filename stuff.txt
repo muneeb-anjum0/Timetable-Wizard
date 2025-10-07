@@ -1,12 +1,10 @@
-PS C:\Users\MuneebAnjum\Desktop\Timetable Wizard> npm start
+cd frontend; npm start
 
-PS C:\Users\MuneebAnjum\Desktop\Timetable Wizard> & "C:/Users/MuneebAnjum/Desktop/Timetable Wizard/.venv/Scripts/python.exe" backend/app.py
+& "C:/Users/MuneebAnjum/Desktop/Timetable Wizard/.venv/Scripts/python.exe" backend/app.py
 
 
 # Run once with beautiful table display (recommended)
 python -m src.scraper.main --once
-
-
 
 # 1. Run once with table display (default behavior)
 python -m src.scraper.main --once
@@ -27,7 +25,7 @@ python -m src.scraper.main --config-info
 python -m src.scraper.main --once --debug
 
 # 7. Clear cache before running
-python -m src.scraper.main --once --cache-clear
+python -m src.scraper.main --once --cache-clearxZ
 
 # 8. Start the nightly scheduler (runs continuously)
 python -m src.scraper.main --run-scheduler

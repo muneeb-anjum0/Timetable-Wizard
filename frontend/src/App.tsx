@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Calendar, Settings, Activity } from 'lucide-react';
+import { RefreshCw, Calendar, Settings, Activity, LogOut } from 'lucide-react';
 import './App.css';
 import { apiService } from './services/api';
 import { TimetableData, ApiResponse, StatusData, ConfigData } from './types/api';
@@ -7,22 +7,47 @@ import TimetableTable from './components/TimetableTable/TimetableTable';
 import SummaryStats from './components/SummaryStats/SummaryStats';
 import StatusIndicator from './components/StatusIndicator/StatusIndicator';
 import SemesterManager from './components/SemesterManager/SemesterManager';
+import LoginScreen from './components/LoginScreen/LoginScreen';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
-function App() {
+function AppContent() {
+  const { user, isAuthenticated, logout, loading: authLoading } = useAuth();
   const [timetableData, setTimetableData] = useState<TimetableData | null>(null);
   const [config, setConfig] = useState<ConfigData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isScraperRunning, setIsScraperRunning] = useState(false);
+  const [isSemesterUpdateRunning, setIsSemesterUpdateRunning] = useState(false);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'warning'>('idle');
   const [message, setMessage] = useState('');
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [showSemesterManager, setShowSemesterManager] = useState(false);
+  const [operationInProgress, setOperationInProgress] = useState(false);
 
-  // Load initial data on component mount
+  // Load initial data on component mount (must be called before early returns)
   useEffect(() => {
-    loadLatestTimetable();
-    loadConfig();
-    checkStatus();
-  }, []);
+    if (isAuthenticated) {
+      loadLatestTimetable();
+      loadConfig();
+      checkStatus();
+    }
+  }, [isAuthenticated]);
+
+  // Show loading screen while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return <LoginScreen />;
+  }
 
   const loadConfig = async () => {
     try {
@@ -39,24 +64,33 @@ function App() {
     }
   };
 
-  const loadLatestTimetable = async () => {
+  const loadLatestTimetable = async (force = false) => {
+    if (operationInProgress && !force) {
+      console.log('Operation in progress, skipping timetable load');
+      return;
+    }
+    
     try {
       setIsLoading(true);
+      setOperationInProgress(true);
       const response = await apiService.getLatestTimetable();
       if (response.success && response.data) {
         setTimetableData(response.data);
         setStatus('success');
         setMessage(response.cached ? 'Loaded cached data' : 'Data loaded successfully');
       } else {
+        setTimetableData(null);
         setStatus('warning');
         setMessage('No timetable data available. Try running a manual scrape.');
       }
     } catch (error) {
+      console.error('Error loading timetable:', error);
+      setTimetableData(null);
       setStatus('error');
       setMessage('Failed to load timetable data');
-      console.error('Error loading timetable:', error);
     } finally {
       setIsLoading(false);
+      setOperationInProgress(false);
     }
   };
 
@@ -72,8 +106,15 @@ function App() {
   };
 
   const runScraper = async () => {
+    if (isScraperRunning || operationInProgress) {
+      console.log('Scraper already running or operation in progress');
+      return;
+    }
+    
     try {
+      setIsScraperRunning(true);
       setIsLoading(true);
+      setOperationInProgress(true);
       setStatus('loading');
       setMessage('Running scraper...');
       
@@ -86,35 +127,64 @@ function App() {
       } else {
         setStatus('error');
         setMessage(response.error || 'Scrape failed');
+        setTimetableData(null);
       }
     } catch (error) {
+      console.error('Error running scraper:', error);
       setStatus('error');
       setMessage('Failed to run scraper');
-      console.error('Error running scraper:', error);
+      setTimetableData(null);
     } finally {
+      setIsScraperRunning(false);
       setIsLoading(false);
+      setOperationInProgress(false);
     }
   };
 
   const handleSaveSemesters = async (newSemesters: string[]) => {
+    if (isSemesterUpdateRunning || operationInProgress) {
+      console.log('Semester update already running or operation in progress');
+      return;
+    }
+    
     try {
+      setIsSemesterUpdateRunning(true);
       setIsLoading(true);
+      setOperationInProgress(true);
+      setStatus('loading');
+      setMessage('Updating semester settings...');
+      
       const response = await apiService.updateSemesters(newSemesters);
       if (response.success) {
         // Reload config to get updated data
         await loadConfig();
+        
+        // Clear old timetable data since filters changed
+        setTimetableData(null);
+        
         setStatus('success');
-        setMessage(`Successfully updated ${newSemesters.length} allowed semesters`);
+        setMessage(`Successfully updated ${newSemesters.length} allowed semesters. Run scraper to apply new filters.`);
+        
+        // Automatically run scraper if there are allowed semesters
+        if (newSemesters.length > 0) {
+          setMessage(`Successfully updated ${newSemesters.length} allowed semesters. Running scraper...`);
+          // Small delay to let user see the update message
+          setTimeout(() => {
+            runScraper();
+          }, 1000);
+        }
       } else {
         setStatus('error');
         setMessage(response.error || 'Failed to update semesters');
       }
     } catch (error) {
+      console.error('Error updating semesters:', error);
       setStatus('error');
       setMessage('Failed to update semesters');
-      console.error('Error updating semesters:', error);
     } finally {
+      setIsSemesterUpdateRunning(false);
       setIsLoading(false);
+      setOperationInProgress(false);
     }
   };
 
@@ -137,7 +207,7 @@ function App() {
               <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mr-2 sm:mr-3" />
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">TimeTable Scraper</h1>
-                <p className="text-xs sm:text-sm text-gray-500">University Class Schedule Dashboard</p>
+                <p className="text-xs sm:text-sm text-gray-500">Welcome, {user?.email}</p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
@@ -145,6 +215,13 @@ function App() {
                 Last updated: {formatLastUpdate(lastUpdate)}
               </div>
               <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={logout}
+                  className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors text-xs sm:text-sm"
+                >
+                  <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span>Sign Out</span>
+                </button>
                 <button
                   onClick={() => setShowSemesterManager(true)}
                   className="inline-flex items-center px-2 sm:px-3 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -154,12 +231,16 @@ function App() {
                 </button>
                 <button
                   onClick={runScraper}
-                  disabled={isLoading}
+                  disabled={isScraperRunning || operationInProgress}
                   className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">{isLoading ? 'Scraping...' : 'Run Scraper'}</span>
-                  <span className="sm:hidden">{isLoading ? '⏳' : '🔄'}</span>
+                  <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${isScraperRunning ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">
+                    {isScraperRunning ? 'Scraping...' : isSemesterUpdateRunning ? 'Updating...' : 'Run Scraper'}
+                  </span>
+                  <span className="sm:hidden">
+                    {isScraperRunning ? '⏳' : isSemesterUpdateRunning ? '🔄' : '▶️'}
+                  </span>
                 </button>
               </div>
             </div>
@@ -279,6 +360,15 @@ function App() {
         onSave={handleSaveSemesters}
       />
     </div>
+  );
+}
+
+// Main App component with AuthProvider
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
