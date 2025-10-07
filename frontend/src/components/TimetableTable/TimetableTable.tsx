@@ -97,7 +97,7 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
               <div className="bg-blue-50 px-4 py-3 border-l-4 border-blue-400">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <span className="text-lg mr-2"></span>
+                    <img src="/pulse.svg" alt="Pulse" className="w-5 h-5 mr-2" />
                     <div>
                       <h3 className="text-sm font-semibold text-blue-800">{semester}</h3>
                       <p className="text-xs text-blue-600">{grouped[semester].length} classes</p>

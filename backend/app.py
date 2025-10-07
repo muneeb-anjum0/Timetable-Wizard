@@ -503,24 +503,47 @@ def get_latest_timetable():
 def get_status():
     """Get current system status"""
     try:
-        # Check if cache file exists and when it was last updated
-        cache_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'cache', 'last_checked.json')
+        # Get user from request for user-specific data
+        user, error_response, status_code = get_user_from_request()
+        user_id = user.get('id') if user else None
         
-        status = {
+        # Get latest timestamp from Supabase (user-specific or global)
+        latest_timestamp = supabase_manager.get_latest_timetable_timestamp(user_id)
+        
+        # Also check local cache file as fallback
+        cache_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'cache', 'last_checked.json')
+        cache_exists = os.path.exists(cache_file)
+        local_timestamp = None
+        
+        if cache_exists:
+            stat = os.stat(cache_file)
+            local_timestamp = datetime.fromtimestamp(stat.st_mtime).isoformat()
+        
+        # Use the most recent timestamp (Supabase or local)
+        last_update = latest_timestamp
+        if local_timestamp and (not latest_timestamp or local_timestamp > latest_timestamp):
+            last_update = local_timestamp
+        
+        status_data = {
             'timestamp': datetime.now().isoformat(),
-            'cache_exists': os.path.exists(cache_file),
-            'last_update': None
+            'cache_exists': cache_exists or (latest_timestamp is not None),
+            'last_update': last_update,
+            'source': 'supabase' if latest_timestamp else ('local' if local_timestamp else 'none')
         }
         
-        if os.path.exists(cache_file):
-            stat = os.stat(cache_file)
-            status['last_update'] = datetime.fromtimestamp(stat.st_mtime).isoformat()
-        
-        return jsonify(status)
+        return jsonify({
+            'success': True,
+            'data': status_data,
+            'timestamp': datetime.now().isoformat()
+        })
         
     except Exception as e:
         logger.error(f"Error getting status: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

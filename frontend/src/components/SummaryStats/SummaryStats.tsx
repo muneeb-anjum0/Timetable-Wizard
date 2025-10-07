@@ -18,9 +18,7 @@ const SummaryStats: React.FC<SummaryStatsProps> = ({ data }) => {
         <div className="p-5">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">T</span>
-              </div>
+              <img src="/courses.svg" alt="Total Classes" className="w-8 h-8" />
             </div>
             <div className="ml-5 w-0 flex-1">
               <dl>
@@ -40,9 +38,7 @@ const SummaryStats: React.FC<SummaryStatsProps> = ({ data }) => {
         <div className="p-5">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">C</span>
-              </div>
+              <img src="/uniqueCourses.svg" alt="Unique Courses" className="w-8 h-8" />
             </div>
             <div className="ml-5 w-0 flex-1">
               <dl>
@@ -62,9 +58,7 @@ const SummaryStats: React.FC<SummaryStatsProps> = ({ data }) => {
         <div className="p-5">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">F</span>
-              </div>
+              <img src="/faculty.svg" alt="Faculty Members" className="w-8 h-8" />
             </div>
             <div className="ml-5 w-0 flex-1">
               <dl>
@@ -84,9 +78,7 @@ const SummaryStats: React.FC<SummaryStatsProps> = ({ data }) => {
         <div className="p-5">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">D</span>
-              </div>
+              <img src="/day.svg" alt="Day" className="w-8 h-8" />
             </div>
             <div className="ml-5 w-0 flex-1">
               <dl>

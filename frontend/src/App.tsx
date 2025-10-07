@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Calendar, Settings, Activity, LogOut } from 'lucide-react';
 import './App.css';
 import { apiService } from './services/api';
 import { TimetableData, ApiResponse, StatusData, ConfigData } from './types/api';
@@ -221,22 +220,22 @@ function AppContent() {
                   onClick={logout}
                   className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors text-xs sm:text-sm"
                 >
-                  <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <img src="/logout.svg" alt="Logout" className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>Sign Out</span>
                 </button>
                 <button
                   onClick={() => setShowSemesterManager(true)}
                   className="inline-flex items-center px-2 sm:px-3 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
-                  <Settings className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <img src="/setting.svg" alt="Settings" className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Semesters </span>({config?.semester_filter?.length || 0})
                 </button>
                 <button
                   onClick={runScraper}
                   disabled={isScraperRunning || operationInProgress}
-                  className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center px-3 sm:px-4 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${isScraperRunning ? 'animate-spin' : ''}`} />
+                  <img src="/refresh.svg" alt="Refresh" className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${isScraperRunning ? 'animate-spin' : ''}`} />
                   <span className="hidden sm:inline">
                     {isScraperRunning ? 'Scraping...' : isSemesterUpdateRunning ? 'Updating...' : 'Run Scraper'}
                   </span>
@@ -287,7 +286,7 @@ function AppContent() {
                   </p>
                 </div>
                 <div className="flex items-center">
-                  <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 mr-2" />
+                  <img src="/pulse.svg" alt="Pulse" className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 mr-2" />
                   <span className="text-xs sm:text-sm text-gray-500">
                     {timetableData?.items?.length || 0} classes
                   </span>
@@ -300,7 +299,7 @@ function AppContent() {
                 <TimetableTable items={timetableData.items} />
               ) : (
                 <div className="text-center py-8 sm:py-12 px-4">
-                  <Calendar className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
+                  <img src="/day.svg" alt="Calendar" className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900">No schedule data</h3>
                   <p className="mt-1 text-xs sm:text-sm text-gray-500">
                     Click "Run Scraper" to fetch the latest schedule from your email.
@@ -342,7 +341,7 @@ function AppContent() {
         <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
-              <Settings className="h-4 w-4 text-gray-400 mr-2" />
+              <img src="/setting.svg" alt="Settings" className="h-4 w-4 text-gray-400 mr-2" />
               <span className="text-sm text-gray-500">
                 TimeTable Scraper v1.0 - Automated Schedule Management
               </span>

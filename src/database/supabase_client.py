@@ -108,6 +108,25 @@ class SupabaseManager:
             logger.error(f"Error getting cache for user {user_id}: {e}")
             return None
 
+    def get_latest_timetable_timestamp(self, user_id: str = None) -> Optional[str]:
+        """Get the timestamp of the most recent timetable entry"""
+        try:
+            query = self.client.table('timetable_cache').select('created_at').order('created_at', desc=True).limit(1)
+            
+            # If user_id is provided, filter by user, otherwise get global latest
+            if user_id:
+                query = query.eq('user_id', user_id)
+                
+            result = query.execute()
+            
+            if result.data:
+                return result.data[0]['created_at']
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting latest timestamp: {e}")
+            return None
+
     def save_user_settings(self, user_id: str, settings: Dict) -> bool:
         """Save user settings (semester filters, etc.)"""
         try:
