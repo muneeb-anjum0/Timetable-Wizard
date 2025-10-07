@@ -204,9 +204,11 @@ function AppContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 sm:py-6">
             <div className="flex items-center mb-3 sm:mb-0">
-              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mr-2 sm:mr-3" />
-              <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">TimeTable Scraper</h1>
+              <img src="/logoo.svg" alt="Logo" className="h-7 w-7 sm:h-9 sm:w-9 mr-2 sm:mr-3" />
+              <div className="flex flex-col">
+                <div className="flex items-center">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">TimeTable Scraper</h1>
+                </div>
                 <p className="text-xs sm:text-sm text-gray-500">Welcome, {user?.email}</p>
               </div>
             </div>

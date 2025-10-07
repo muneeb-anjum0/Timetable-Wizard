@@ -32,8 +32,10 @@ class Settings(BaseModel):
         default_factory=lambda: _clean(os.getenv("GMAIL_QUERY_BASE"),
                                        'subject:("Class Schedule" OR schedule) in:inbox')
     )
-    check_hour_local: int = Field(default_factory=lambda: int(_clean(os.getenv("CHECK_HOUR_LOCAL"), "23")))
+    check_hour_local: int = Field(default_factory=lambda: int(_clean(os.getenv("CHECK_HOUR_LOCAL"), "20")))
     check_minute_local: int = Field(default_factory=lambda: int(_clean(os.getenv("CHECK_MINUTE_LOCAL"), "0")))
+    # Hour when next day's timetable becomes available (24-hour format)
+    next_day_available_hour: int = Field(default_factory=lambda: int(_clean(os.getenv("NEXT_DAY_AVAILABLE_HOUR"), "17")))
     newer_than_days: int = Field(default_factory=lambda: int(_clean(os.getenv("NEWER_THAN_DAYS"), "2")))
     # Parse semesters directly instead of using validator
     allowed_semesters: List[str] = Field(default_factory=lambda: _parse_semesters_direct())

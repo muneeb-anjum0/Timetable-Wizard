@@ -198,7 +198,13 @@ def parse_schedule_text(text: str, semesters: List[str]) -> List[Dict]:
                                 break
                     
                     # Set i to the last processed line
-                i = j - 1
+                    i = j - 1
+                else:
+                    # No continuation needed, just process current line
+                    pass
+            else:
+                # No course match, just process current line
+                pass
             
             if settings.debug_parsing:
                 logger.info(f"Line {line_num}: KEEPING - {match_reason}")
@@ -262,7 +268,7 @@ def parse_schedule_text(text: str, semesters: List[str]) -> List[Dict]:
                 "class_section": semester_found or _extract_class_section(combined_line),
                 "course": extracted_course,
                 "course_title": course_title,
-                "faculty": faculty_name,
+                "faculty": _map_faculty_name(faculty_name),
                 "room": extracted_room,
                 "time": extracted_time,
                 "credits": credit_match.group(1) if credit_match else None,
@@ -456,13 +462,21 @@ def parse_schedule_html(html: str, semesters: List[str]) -> List[Dict]:
         room_text = pick("room")
         is_cancelled = room_text and re.search(r'\b(?:cancelled|canceled)\b', room_text, re.IGNORECASE) is not None
         
+        # Debug: Log the faculty field for SEC 2404
+        faculty_raw = pick("faculty")
+        course_raw = pick("course")
+        if course_raw and "SEC 2404" in course_raw:
+            logger.info(f"DEBUG SEC 2404: faculty_raw='{faculty_raw}', course='{course_raw}'")
+            # Also log all the cells for this row
+            logger.info(f"DEBUG SEC 2404: all cells = {cells}")
+        
         rec = {
             "sr_no": pick("sr_no"),
             "dept": pick("dept"),
             "program": pick("program"),
             "class_section": class_section,
             "course": pick("course"),
-            "faculty": pick("faculty"),
+            "faculty": _map_faculty_name(pick("faculty")),
             "room": "Cancelled" if is_cancelled else pick("room"),
             "time": pick("time"),
             "campus": pick("campus"),
@@ -594,58 +608,51 @@ def _extract_faculty_szabist(line: str, course_match, credit_match) -> Optional[
             # Properly capitalize the faculty name
             return ' '.join(word.title() for word in faculty_words)
     else:
-        # No credits found - this happens with lab classes like:
-        # "1 CS BS (CS) BS (CS) - 1 A CSCL 1103 Lab: Fundamentals of Programming Sohail Lab 01 11:00 AM - 02:00 PM"
-        # Pattern: [Course] [Title] [Faculty] [Room] [Time] [Campus]
+        # No credits found - this is more complex as we need to separate title from faculty
+        # Pattern: [Course Code] [Course Title] [Faculty] [Room] [Time] [Campus]
         
-        # Remove time and campus from the end
+        # Remove time and campus from the end first
         cleaned = re.sub(r'\d{1,2}:\d{2}\s*(?:AM|PM).*$', '', after_course).strip()
         cleaned = re.sub(r'SZABIST\s+(?:University\s+Campus|HMB).*$', '', cleaned, flags=re.IGNORECASE).strip()
         
-        # Look for pattern: [Title] [Faculty] [Room]
-        # Improved approach: work backwards from room to find faculty name(s)
-        words = cleaned.replace(':', ' ').split()
+        # Remove room patterns from the end to isolate title and faculty
+        # This handles cases like "Lab 01", "Digital Lab", "301", "NB-208", etc.
+        cleaned = re.sub(r'\b(?:Lab\s*\d+|Digital\s*Lab|\d{3}|NB-\d+|OB-\d+|TV\s*Studio|Media\s*Lab)\s*$', '', cleaned, flags=re.IGNORECASE).strip()
         
-        # Find room position (looking for Lab followed by number, or other room patterns)
-        room_idx = -1
-        for i in range(len(words) - 1):
-            if words[i].lower() == 'lab' and (i + 1 < len(words) and words[i+1].isdigit()):
-                room_idx = i
-                break
+        # Now we should have: [Course Title] [Faculty Name]
+        # Strategy: Look for common course title patterns and faculty name patterns
+        words = cleaned.split()
         
-        # If "Lab NN" pattern not found, look for other room patterns
-        if room_idx == -1:
-            for i, word in enumerate(words):
-                if re.match(r'^(?:Digital\s*Lab|\d{3}|NB-\d+|OB-\d+)$', word, re.IGNORECASE):
-                    room_idx = i
-                    break
-        
-        if room_idx > 0:
-            # Common course title words that should stop faculty collection
-            title_words = {'of', 'and', 'in', 'to', 'for', 'with', 'programming', 'fundamentals', 
-                          'systems', 'theory', 'analysis', 'design', 'data', 'structures', 
-                          'algorithms', 'computer', 'software', 'calculus', 'mathematics', 
-                          'physics', 'chemistry', 'english', 'composition', 'comprehension',
-                          'lab', 'laboratory', 'principles', 'management', 'human', 'interaction'}
+        if len(words) >= 2:
+            # Common course title ending words that indicate title continuation
+            title_words = {'design', 'and', 'architecture', 'systems', 'management', 'analysis', 
+                          'programming', 'fundamentals', 'engineering', 'development', 'theory',
+                          'principles', 'structures', 'algorithms', 'networks', 'communications',
+                          'databases', 'security', 'computing', 'science', 'mathematics', 'calculus',
+                          'physics', 'chemistry', 'english', 'composition', 'comprehension', 'lab',
+                          'laboratory', 'human', 'resource', 'business', 'process', 'interaction',
+                          'interface', 'software', 'computer', 'data', 'information', 'technology'}
             
-            # Look backwards for faculty name
-            faculty_words = []
-            for i in range(1, min(4, room_idx + 1)):  # Check up to 3 words before room
-                word_idx = room_idx - i
-                if word_idx >= 0:
-                    word = words[word_idx]
-                    
-                    # Stop if we hit a common course title word
-                    if word.lower() in title_words:
-                        break
-                        
-                    if word and word[0].isupper() and word.isalpha():
-                        faculty_words.insert(0, word)
-                    else:
+            # Find where the title likely ends and faculty begins
+            # Look for the first sequence of capitalized words that aren't title words
+            faculty_start_idx = -1
+            
+            # Work backwards from the end to find faculty name
+            # Faculty names are typically 1-3 words at the end
+            for start_idx in range(max(0, len(words) - 3), len(words)):
+                candidate_faculty = words[start_idx:]
+                
+                # Check if all words look like names (capitalized, alphabetic)
+                if all(word[0].isupper() and word.isalpha() for word in candidate_faculty):
+                    # Check if any of these words are common title words
+                    if not any(word.lower() in title_words for word in candidate_faculty):
+                        faculty_start_idx = start_idx
                         break
             
-            if faculty_words:
-                return ' '.join(word.title() for word in faculty_words)
+            if faculty_start_idx >= 0:
+                faculty_words = words[faculty_start_idx:]
+                if faculty_words:
+                    return ' '.join(word.title() for word in faculty_words)
     
     return None
 
@@ -709,37 +716,40 @@ def _extract_course_title_szabist(line: str, course_match, faculty_name: str) ->
         title_part = title_part[:credits_match.start()]
     else:
         # No credits found - need to be more careful about where title ends
-        # For cases like "Lab: Fundamentals of Programming Sohail Lab 01"
-        # Remove faculty name if we found it and it appears before room
+        # First remove time, room, and campus patterns to isolate title and faculty
+        temp_part = title_part
+        temp_part = re.sub(r'\d{1,2}:\d{2}\s*(?:AM|PM).*$', '', temp_part)
+        temp_part = re.sub(r'SZABIST\s+(?:University\s+Campus|HMB).*$', '', temp_part, flags=re.IGNORECASE)
+        temp_part = re.sub(r'\b(?:NB-\d+|Lab\s*\d+|Digital\s*Lab|\d{3}|Hall\s*\d+[A-Z]?|TV\s*Studio|Media\s*Lab)\b.*$', '', temp_part, flags=re.IGNORECASE)
+        
+        # If we have faculty name, try to find where title ends and faculty begins
         if faculty_name:
-            # Look for faculty name followed by room pattern
-            faculty_room_pattern = re.escape(faculty_name) + r'\s+(?:Lab\s*\d+|Digital\s*Lab|\d{3}|NB-\d+|OB-\d+)'
-            match = re.search(faculty_room_pattern, title_part, re.IGNORECASE)
-            if match:
-                # End title just before faculty name
-                title_part = title_part[:match.start()].strip()
+            # Look for the first word of faculty name in the cleaned string
+            faculty_words = faculty_name.split()
+            if faculty_words:
+                first_faculty_word = faculty_words[0]
+                # Find the position where faculty name starts
+                faculty_start = temp_part.lower().find(first_faculty_word.lower())
+                if faculty_start > 0:
+                    # Take everything before the faculty name as title
+                    title_part = temp_part[:faculty_start].strip()
+                else:
+                    # Faculty name not found in expected position, keep the whole cleaned part
+                    title_part = temp_part.strip()
+            else:
+                title_part = temp_part.strip()
+        else:
+            title_part = temp_part.strip()
     
-    # Remove time patterns
-    title_part = re.sub(r'\d{1,2}:\d{2}\s*(?:AM|PM)', '', title_part)
-    
-    # Remove room patterns
-    title_part = re.sub(r'\b(?:NB-\d+|Lab\s*\d+|Digital\s*Lab|\d{3}|Hall\s*\d+[A-Z]?|TV\s*Studio|Media\s*Lab)\b', '', title_part, flags=re.IGNORECASE)
-    
-    # Remove campus patterns
-    title_part = re.sub(r'SZABIST\s+(?:University\s+Campus|HMB).*', '', title_part, flags=re.IGNORECASE)
-    
-    # Remove faculty name if we found it (from the end)
-    if faculty_name:
-        # Try to remove faculty from the end
-        faculty_words = faculty_name.split()
-        for word in reversed(faculty_words):
-            if title_part.endswith(' ' + word):
-                title_part = title_part[:-len(' ' + word)].rstrip()
+    # Final cleanup - remove time, room, and campus patterns again in case they weren't caught
+    title_part = re.sub(r'\d{1,2}:\d{2}\s*(?:AM|PM).*$', '', title_part)
+    title_part = re.sub(r'\b(?:NB-\d+|Lab\s*\d+|Digital\s*Lab|\d{3}|Hall\s*\d+[A-Z]?|TV\s*Studio|Media\s*Lab)\b.*$', '', title_part, flags=re.IGNORECASE)
+    title_part = re.sub(r'SZABIST\s+(?:University\s+Campus|HMB).*$', '', title_part, flags=re.IGNORECASE)
     
     # Clean up the title
     title_part = title_part.strip()
     
-    # Remove trailing non-alphabetic characters
+    # Remove trailing non-alphabetic characters except colons (for "Lab:" prefixes)
     title_part = re.sub(r'[^\w\s:()-]+$', '', title_part).strip()
     
     if title_part and len(title_part) > 2:
@@ -784,3 +794,34 @@ def _extract_campus(line: str) -> Optional[str]:
             return match.group(1) if match.lastindex else match.group(0)
     
     return None
+
+# Faculty name mapping to convert incomplete names to full names
+FACULTY_NAME_MAPPING = {
+    # Partial name -> Full name
+    "Saboor": "Tehreem Saboor",
+    "Atif Hussain": "Atif Hussain",  # Already complete
+    "Hafeez": "Hafeez",  # May need to be updated when full name is known
+    "Babar Jehangir": "Babar Jehangir",  # Already complete
+    "Maria Hamid": "Maria Hamid",  # Already complete
+    "Saeed Ur Rehaman": "Saeed Ur Rehaman",  # Already complete
+    # Add more mappings as needed
+}
+
+def _map_faculty_name(faculty_name: str) -> str:
+    """
+    Map partial/incomplete faculty names to full names.
+    This helps resolve cases where the university email only provides partial names.
+    """
+    if not faculty_name:
+        return faculty_name
+    
+    # Clean up the name (remove extra spaces)
+    cleaned_name = ' '.join(faculty_name.split())
+    
+    # Check if we have a mapping for this name
+    mapped_name = FACULTY_NAME_MAPPING.get(cleaned_name)
+    if mapped_name:
+        return mapped_name
+    
+    # Return original name if no mapping found
+    return cleaned_name

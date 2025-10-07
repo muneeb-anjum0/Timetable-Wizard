@@ -39,9 +39,47 @@ LOGGER = logging.getLogger(__name__)
 
 WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
-def _target_day_name(now_local: datetime) -> str:
-    # Use the current local day name (previous behaviour looked for 'tomorrow')
-    return WEEKDAY_NAMES[now_local.weekday()]
+def _target_day_name(now_local: datetime, next_day_available_hour: int = 17) -> str:
+    """
+    Determine which day's timetable to look for based on current time.
+    
+    Logic:
+    - If it's after the configured hour (default 5 PM/17:00), look for tomorrow's timetable
+    - If it's before that hour, look for today's timetable
+    
+    This is because the next day's timetable becomes available 
+    between 5-11 PM on the previous day.
+    
+    Args:
+        now_local: Current local datetime
+        next_day_available_hour: Hour when next day's timetable becomes available (24-hour format)
+    """
+    if now_local.hour >= next_day_available_hour:
+        # Look for tomorrow's timetable
+        tomorrow = now_local + timedelta(days=1)
+        target_day = WEEKDAY_NAMES[tomorrow.weekday()]
+        LOGGER.info(f"After {next_day_available_hour}:00 (current: {now_local.hour}:00), looking for tomorrow's timetable: {target_day}")
+        return target_day
+    else:
+        # Look for today's timetable
+        target_day = WEEKDAY_NAMES[now_local.weekday()]
+        LOGGER.info(f"Before {next_day_available_hour}:00 (current: {now_local.hour}:00), looking for today's timetable: {target_day}")
+        return target_day
+
+def _target_date(now_local: datetime, next_day_available_hour: int = 17) -> datetime:
+    """
+    Get the target date that corresponds to the day we're looking for.
+    
+    Args:
+        now_local: Current local datetime
+        next_day_available_hour: Hour when next day's timetable becomes available (24-hour format)
+    """
+    if now_local.hour >= next_day_available_hour:
+        # Target tomorrow's date
+        return now_local + timedelta(days=1)
+    else:
+        # Target today's date
+        return now_local
 
 def _build_query(base: str, day_name: str, newer_than_days: int) -> str:
     return f'{base} "for {day_name}" newer_than:{newer_than_days}d -in:trash'
@@ -92,12 +130,14 @@ def run_once(user_email: str = "me", show_table: bool = False, user_id: Optional
         gmail_query_base = user_settings.get('gmail_query_base', settings.gmail_query_base) if user_settings else settings.gmail_query_base
         newer_than_days = user_settings.get('newer_than_days', settings.newer_than_days) if user_settings else settings.newer_than_days
         timezone = user_settings.get('timezone', settings.tz) if user_settings else settings.tz
+        next_day_available_hour = user_settings.get('next_day_available_hour', settings.next_day_available_hour) if user_settings else settings.next_day_available_hour
         
         LOGGER.info(f"Final allowed_semesters being used: {allowed_semesters}")
         
         local_tz = tz.gettz(timezone)
         now_local = datetime.now(tz=local_tz)
-        for_day_name = _target_day_name(now_local)
+        for_day_name = _target_day_name(now_local, next_day_available_hour)
+        target_date = _target_date(now_local, next_day_available_hour)
 
         query = _build_query(gmail_query_base, for_day_name, newer_than_days)
 
@@ -155,7 +195,7 @@ def run_once(user_email: str = "me", show_table: bool = False, user_id: Optional
             LOGGER.warning("No messages matched the query.")
             doc = {
                 "for_day": for_day_name,
-                "for_date": now_local.date().isoformat(),
+                "for_date": target_date.date().isoformat(),
                 "query": query,
                 "message_id": None,
                 "items": [],
@@ -204,7 +244,7 @@ def run_once(user_email: str = "me", show_table: bool = False, user_id: Optional
 
         doc = {
             "for_day": for_day_name,
-            "for_date": now_local.date().isoformat(),
+            "for_date": target_date.date().isoformat(),
             "query": query,
             "message_id": msg_id,
             "items": items,
