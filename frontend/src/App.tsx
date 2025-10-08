@@ -11,6 +11,14 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 function AppContent() {
   const { user, isAuthenticated, logout, loading: authLoading } = useAuth();
+  // Custom sign out confirmation dialog
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const handleLogoutClick = () => setShowLogoutConfirm(true);
+  const handleLogoutConfirm = () => {
+    setShowLogoutConfirm(false);
+    logout();
+  };
+  const handleLogoutCancel = () => setShowLogoutConfirm(false);
   const [timetableData, setTimetableData] = useState<TimetableData | null>(null);
   const [config, setConfig] = useState<ConfigData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,6 +30,9 @@ function AppContent() {
   const [showSemesterManager, setShowSemesterManager] = useState(false);
   const [operationInProgress, setOperationInProgress] = useState(false);
 
+  // Computed state
+  const noSemestersConfigured = config && (!config.semester_filter || config.semester_filter.length === 0);
+
   // Load initial data on component mount (must be called before early returns)
   useEffect(() => {
     if (isAuthenticated) {
@@ -30,6 +41,14 @@ function AppContent() {
       checkStatus();
     }
   }, [isAuthenticated]);
+
+  // Check for no semesters configured and set warning message
+  useEffect(() => {
+    if (config && timetableData && noSemestersConfigured && !isScraperRunning && !operationInProgress) {
+      setStatus('warning');
+      setMessage('No semesters configured. Please add semesters to filter and organize your schedule.');
+    }
+  }, [config, timetableData, noSemestersConfigured, isScraperRunning, operationInProgress]);
 
   // Show loading screen while checking auth
   if (authLoading) {
@@ -109,7 +128,52 @@ function AppContent() {
       console.log('Scraper already running or operation in progress');
       return;
     }
+
+    // Check if semesters are configured before running scraper
+    if (!config?.semester_filter || config.semester_filter.length === 0) {
+      setStatus('error');
+      setMessage('No semesters configured. Please add semesters before running the scraper.');
+      return;
+    }
     
+    try {
+      setIsScraperRunning(true);
+      setIsLoading(true);
+      setOperationInProgress(true);
+      setStatus('loading');
+      setMessage('Running scraper...');
+      
+      const response = await apiService.runScraper();
+      if (response.success && response.data) {
+        setTimetableData(response.data);
+        setStatus('success');
+        setMessage(response.message || 'Scrape completed successfully');
+        await checkStatus(); // Update last update time
+      } else {
+        setStatus('error');
+        setMessage(response.error || 'Scrape failed');
+        setTimetableData(null);
+      }
+    } catch (error) {
+      console.error('Error running scraper:', error);
+      setStatus('error');
+      setMessage('Failed to run scraper');
+      setTimetableData(null);
+    } finally {
+      setIsScraperRunning(false);
+      setIsLoading(false);
+      setOperationInProgress(false);
+    }
+  };
+
+  // Special version of runScraper that bypasses semester validation (used for auto-run after updating semesters)
+  const runScraperWithSemesters = async (semestersList: string[]) => {
+    if (isScraperRunning || operationInProgress) {
+      console.log('Scraper already running or operation in progress');
+      return;
+    }
+
+    // This version skips the semester validation since we know semesters are configured
     try {
       setIsScraperRunning(true);
       setIsLoading(true);
@@ -167,9 +231,9 @@ function AppContent() {
         // Automatically run scraper if there are allowed semesters
         if (newSemesters.length > 0) {
           setMessage(`Successfully updated ${newSemesters.length} allowed semesters. Running scraper...`);
-          // Small delay to let user see the update message
+          // Small delay to let config state update, then run scraper
           setTimeout(() => {
-            runScraper();
+            runScraperWithSemesters(newSemesters);
           }, 1000);
         }
       } else {
@@ -199,43 +263,29 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow">
+      <header className="bg-white shadow sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 sm:py-6">
-            <div className="flex items-center mb-3 sm:mb-0">
-              <img src="/logoo.svg" alt="Logo" className="h-7 w-7 sm:h-9 sm:w-9 mr-2 sm:mr-3" />
-              <div className="flex flex-col">
-                <div className="flex items-center">
-                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">TimeTable Scraper</h1>
-                </div>
-                <p className="text-xs sm:text-sm text-gray-500">Welcome, {user?.email}</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 sm:py-4">
+            <div className="flex items-center gap-4 mb-2 sm:mb-0">
+              <img src="/logoo.svg" alt="Logo" className="h-9 w-9 sm:h-11 sm:w-11 p-1 bg-white" style={{overflow: 'visible'}} />
+              <div className="flex items-center bg-blue-50 rounded-full px-3 py-1 shadow">
+                <span className="text-xs sm:text-sm text-blue-700 font-semibold">Welcome</span>
+                <span className="mx-2 text-xs sm:text-sm font-mono text-blue-900">{user?.email}</span>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-              <div className="text-xs sm:text-sm text-gray-500">
-                Last updated: {formatLastUpdate(lastUpdate)}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-100 rounded-full px-3 py-1 shadow">
+                <img src="/refresh.svg" alt="Last Updated" className="h-4 w-4 mr-1" />
+                <span>Last updated:</span>
+                <span className="font-mono text-blue-700">{formatLastUpdate(lastUpdate)}</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={logout}
-                  className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors text-xs sm:text-sm"
-                >
-                  <img src="/logout.svg" alt="Logout" className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span>Sign Out</span>
-                </button>
-                <button
-                  onClick={() => setShowSemesterManager(true)}
-                  className="inline-flex items-center px-2 sm:px-3 py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <img src="/setting.svg" alt="Settings" className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Semesters </span>({config?.semester_filter?.length || 0})
-                </button>
-                <button
                   onClick={runScraper}
                   disabled={isScraperRunning || operationInProgress}
-                  className="inline-flex items-center px-3 sm:px-4 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center px-3 sm:px-4 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-full shadow text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-                  <img src="/refresh.svg" alt="Refresh" className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${isScraperRunning ? 'animate-spin' : ''}`} />
+                  <img src="/refresh.svg" alt="Refresh" className={`h-4 w-4 mr-2 ${isScraperRunning ? 'animate-spin' : ''}`} />
                   <span className="hidden sm:inline">
                     {isScraperRunning ? 'Scraping...' : isSemesterUpdateRunning ? 'Updating...' : 'Run Scraper'}
                   </span>
@@ -243,6 +293,45 @@ function AppContent() {
                     {isScraperRunning ? '⏳' : isSemesterUpdateRunning ? '🔄' : '▶️'}
                   </span>
                 </button>
+                <button
+                  onClick={() => setShowSemesterManager(true)}
+                  className={`inline-flex items-center px-3 py-2 border text-xs sm:text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition ${
+                    timetableData && config && (!config.semester_filter || config.semester_filter.length === 0) 
+                      ? 'animate-pulse-glow-blue border-blue-400' 
+                      : 'border-gray-300'
+                  }`}
+                >
+                  <img src="/setting.svg" alt="Settings" className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Semesters </span>({config?.semester_filter?.length || 0})
+                </button>
+                <div className="relative inline-block">
+                  <button
+                    onClick={handleLogoutClick}
+                    className="flex items-center space-x-1 text-gray-600 hover:text-red-600 px-3 py-2 rounded-full hover:bg-red-50 transition-colors text-xs sm:text-sm border border-gray-200"
+                  >
+                    <img src="/logout.svg" alt="Logout" className="h-4 w-4" />
+                    <span>Sign Out</span>
+                  </button>
+                  {showLogoutConfirm && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 text-center">
+                      <div className="text-gray-700 mb-3 text-sm">Are you sure you want to sign out?</div>
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={handleLogoutCancel}
+                          className="inline-flex items-center px-3 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-full shadow text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleLogoutConfirm}
+                          className="inline-flex items-center px-3 py-2 border-2 border-red-400 text-xs sm:text-sm font-medium rounded-full shadow text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400 transition"
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -263,93 +352,169 @@ function AppContent() {
             </div>
           )}
 
-          {/* Summary Stats */}
-          {timetableData && (
+          {/* Summary Stats - Always show when we have data or when config is loaded and no semesters configured */}
+          {(timetableData || (config && noSemestersConfigured)) && (
             <div>
-              <SummaryStats data={timetableData} />
-            </div>
-          )}
-
-          {/* Timetable */}
-          <div className="bg-white shadow overflow-hidden rounded-md sm:rounded-lg">
-            <div className="px-3 sm:px-4 py-4 sm:py-5 lg:px-6 border-b border-gray-200">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div className="mb-2 sm:mb-0">
-                  <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
-                    Class Schedule
-                  </h3>
-                  <p className="mt-1 max-w-2xl text-xs sm:text-sm text-gray-500">
-                    {timetableData 
-                      ? `${timetableData.for_day} - ${new Date(timetableData.for_date).toLocaleDateString()}`
-                      : 'No data available'
-                    }
-                  </p>
-                </div>
-                <div className="flex items-center">
-                  <img src="/pulse.svg" alt="Pulse" className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 mr-2" />
-                  <span className="text-xs sm:text-sm text-gray-500">
-                    {timetableData?.items?.length || 0} classes
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="p-0">
               {timetableData ? (
-                <TimetableTable items={timetableData.items} />
+                <SummaryStats data={timetableData} config={config || undefined} />
               ) : (
-                <div className="text-center py-8 sm:py-12 px-4">
-                  <img src="/day.svg" alt="Calendar" className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No schedule data</h3>
-                  <p className="mt-1 text-xs sm:text-sm text-gray-500">
-                    Click "Run Scraper" to fetch the latest schedule from your email.
-                  </p>
+                // Show placeholder stats when no semesters configured
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                    <div className="p-5">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <img src="/courses.svg" alt="Total Classes" className="w-8 h-8" />
+                        </div>
+                        <div className="ml-5 w-0 flex-1">
+                          <dl>
+                            <dt className="text-sm font-medium text-gray-500 truncate">
+                              Total Classes
+                            </dt>
+                            <dd className="text-lg font-medium text-gray-900">
+                              0
+                            </dd>
+                          </dl>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                    <div className="p-5">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <img src="/uniqueCourses.svg" alt="Unique Courses" className="w-8 h-8" />
+                        </div>
+                        <div className="ml-5 w-0 flex-1">
+                          <dl>
+                            <dt className="text-sm font-medium text-gray-500 truncate">
+                              Unique Courses
+                            </dt>
+                            <dd className="text-lg font-medium text-gray-900">
+                              0
+                            </dd>
+                          </dl>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                    <div className="p-5">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <img src="/faculty.svg" alt="Faculty Members" className="w-8 h-8" />
+                        </div>
+                        <div className="ml-5 w-0 flex-1">
+                          <dl>
+                            <dt className="text-sm font-medium text-gray-500 truncate">
+                              Faculty Members
+                            </dt>
+                            <dd className="text-lg font-medium text-gray-900">
+                              0
+                            </dd>
+                          </dl>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                    <div className="p-5">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <img src="/day.svg" alt="Day" className="w-8 h-8" />
+                        </div>
+                        <div className="ml-5 w-0 flex-1">
+                          <dl>
+                            <dt className="text-sm font-medium text-gray-500 truncate">
+                              Day
+                            </dt>
+                            <dd className="text-lg font-medium text-gray-900">
+                              Wednesday
+                            </dd>
+                          </dl>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white overflow-hidden shadow rounded-lg col-span-1 md:col-span-2 lg:col-span-4">
+                    <div className="p-5">
+                      <div className="flex items-center mb-2">
+                        <span className="font-semibold text-gray-700 text-base">Semester Breakdown</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-gray-400 text-xs">No semester data available</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
-          </div>
+          )}
 
-          {/* Semester Breakdown */}
-          {timetableData && timetableData.summary && timetableData.summary.semester_breakdown && Object.keys(timetableData.summary.semester_breakdown).length > 0 && (
+          {/* Timetable - Only show if config is loaded and semesters are configured */}
+          {config && !noSemestersConfigured && (
             <div className="bg-white shadow overflow-hidden rounded-md sm:rounded-lg">
-              <div className="px-3 sm:px-4 py-4 sm:py-5 lg:px-6 border-b border-gray-200">
-                <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
-                  Semester Breakdown
-                </h3>
-                <p className="mt-1 max-w-2xl text-xs sm:text-sm text-gray-500">
-                  Classes grouped by semester
-                </p>
-              </div>
-              <div className="px-3 sm:px-4 py-4 sm:py-5 lg:px-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {Object.entries(timetableData.summary.semester_breakdown).map(([semester, count]) => (
-                    <div key={semester} className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                      <div className="text-xs sm:text-sm font-medium text-gray-900">{semester}</div>
-                      <div className="text-xl sm:text-2xl font-bold text-blue-600">{count}</div>
-                      <div className="text-xs text-gray-500">classes</div>
-                    </div>
-                  ))}
+              <div className="px-4 py-4 lg:px-6 border-b border-gray-100 bg-blue-50 rounded-t-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div className="mb-2 sm:mb-0">
+                    <h3 className="text-lg font-semibold text-gray-900 tracking-tight">Class Schedule</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <img src="/pulse.svg" alt="Pulse" className="h-5 w-5 text-blue-400" />
+                    <span className="text-sm text-blue-700 font-medium">
+                      {timetableData?.items?.length || 0} classes
+                    </span>
+                  </div>
                 </div>
+              </div>
+              
+              <div className="p-0">
+                {timetableData ? (
+                  <TimetableTable items={timetableData.items} />
+                ) : (
+                  <div className="text-center py-8 sm:py-12 px-4">
+                    <img src="/day.svg" alt="Calendar" className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No schedule data</h3>
+                    <p className="mt-1 text-xs sm:text-sm text-gray-500">
+                      Click "Run Scraper" to fetch the latest schedule from your email.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
+
+          {/* No Semesters Configured - Show Add Semesters Prompt */}
+          {noSemestersConfigured && (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              <div className="text-gray-500 mb-4">
+                <img src="/setting.svg" alt="Setting" className="mx-auto mb-4 h-16 w-16 text-blue-400" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Configure Semesters to View Schedule</h3>
+                <p className="text-gray-500 mb-6">You have schedule data available, but you need to add semesters to organize and filter your classes properly.</p>
+                <button
+                  onClick={() => setShowSemesterManager(true)}
+                  className="inline-flex items-center px-3 sm:px-4 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-full shadow text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition"
+                >
+                  <img src="/add.svg" alt="Add" className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Add Semesters</span>
+                  <span className="sm:hidden">Add</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Semester Breakdown removed to avoid duplication */}
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-12">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <img src="/setting.svg" alt="Settings" className="h-4 w-4 text-gray-400 mr-2" />
-              <span className="text-sm text-gray-500">
-                TimeTable Scraper v1.0 - Automated Schedule Management
-              </span>
-            </div>
-            <div className="text-sm text-gray-500">
-              Built with React & Flask
-            </div>
-          </div>
+      {/* Minimal Footer */}
+      <footer className="bg-transparent border-0">
+        <div className="w-full py-1 text-center text-xs text-gray-300">
+          &copy; {new Date().getFullYear()} Timetable Wizard
         </div>
       </footer>
 

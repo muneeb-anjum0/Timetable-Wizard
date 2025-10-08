@@ -28,6 +28,46 @@
   color: #61dafb;
 }
 
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 10px;
+  background: #f3f4f6;
+}
+::-webkit-scrollbar-thumb {
+  background: #93c5fd;
+  border-radius: 8px;
+  border: 2px solid #f3f4f6;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #60a5fa;
+}
+::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 8px;
+}
+
+/* Custom animations for semester configuration prompts */
+@keyframes pulse-glow-blue {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    border-color: rgb(59, 130, 246);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.6);
+    border-color: rgb(37, 99, 235);
+  }
+}
+
+.animate-pulse-glow-blue {
+  animation: pulse-glow-blue 2s ease-in-out infinite;
+}
+
+/* For Firefox */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #93c5fd #f3f4f6;
+}
+
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);

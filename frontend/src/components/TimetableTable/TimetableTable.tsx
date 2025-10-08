@@ -87,29 +87,25 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
   }
 
   return (
-    <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+    <div className="bg-white rounded-lg shadow border border-gray-100">
       {/* Mobile Card View (hidden on desktop) */}
       <div className="block md:hidden">
-        <div className="divide-y divide-gray-200">
+  <div className="divide-y divide-gray-100">
           {sortedSemesters.map((semester, semesterIndex) => (
             <div key={semester} className="bg-white">
               {/* Mobile Semester Header */}
               <div className="bg-blue-50 px-4 py-3 border-l-4 border-blue-400">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <img src="/pulse.svg" alt="Pulse" className="w-5 h-5 mr-2" />
-                    <div>
-                      <h3 className="text-sm font-semibold text-blue-800">{semester}</h3>
-                      <p className="text-xs text-blue-600">{grouped[semester].length} classes</p>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-2"></span>
+                  <h3 className="text-sm font-semibold text-blue-800">{semester}</h3>
+                  <span className="text-xs text-blue-600">({grouped[semester].length} classes)</span>
                 </div>
               </div>
               
               {/* Mobile Class Cards */}
               <div className="divide-y divide-gray-100">
                 {grouped[semester].map((item, itemIndex) => (
-                  <div key={`${semester}-${itemIndex}`} className="p-4 hover:bg-gray-50">
+                  <div key={`${semester}-${itemIndex}`} className="p-4 rounded-md border border-gray-50 mb-2 bg-white hover:bg-blue-50 transition">
                     <div className="space-y-2">
                       <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0">
@@ -152,9 +148,9 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
 
       {/* Desktop Table View (hidden on mobile) */}
       <div className="hidden md:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
+  <table className="min-w-full divide-y divide-gray-100">
           <thead className="bg-gray-50">
-            <tr>
+            <tr className="">
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Course
               </th>
@@ -182,39 +178,37 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
             {sortedSemesters.map((semester, semesterIndex) => (
               <React.Fragment key={semester}>
                 {/* Desktop Semester Header Row */}
-                <tr className="bg-blue-50 border-t-2 border-blue-200">
-                  <td colSpan={7} className="px-6 py-4 text-sm font-semibold text-blue-800 bg-blue-100">
-                    <div className="flex items-center">
-                      <span className="mr-2"></span>
-                      {semester} ({grouped[semester].length} classes)
+                <tr className="bg-blue-50 border-t border-blue-200">
+                  <td colSpan={7} className="px-6 py-3 text-base font-semibold text-blue-800 bg-blue-50 rounded-t-md">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>
+                      {semester} <span className="text-xs text-blue-600">({grouped[semester].length} classes)</span>
                     </div>
                   </td>
                 </tr>
                 {/* Desktop Classes for this semester */}
                 {grouped[semester].map((item, itemIndex) => (
-                  <tr key={`${semester}-${itemIndex}`} className="hover:bg-gray-50">
+                  <tr key={`${semester}-${itemIndex}`} className="hover:bg-blue-50 transition">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {item.course || '-'}
+                      <span className="font-semibold text-gray-900">{item.course || '-'}</span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
-                      <div className="break-words leading-5">
-                        {item.course_title || '-'}
-                      </div>
+                      <div className="break-words leading-5 text-gray-700">{item.course_title || '-'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.faculty || '-'}
+                      <span className="text-gray-600">{item.faculty || '-'}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.room || '-'}
+                      <span className="bg-gray-100 rounded px-2 py-1 text-xs text-gray-800">{item.room || '-'}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.time || '-'}
+                      <span className="text-gray-600 font-mono">{item.time || '-'}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.semester || '-'}
+                      <span className="text-blue-700 font-semibold">{item.semester || '-'}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.campus || '-'}
+                      <span className="text-gray-500">{item.campus || '-'}</span>
                     </td>
                   </tr>
                 ))}
