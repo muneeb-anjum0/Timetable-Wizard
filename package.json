@@ -1,9 +1,0 @@
-{
-  "dependencies": {
-    "@tailwindcss/postcss": "^4.1.14"
-  },
-  "devDependencies": {
-    "@types/jest": "^30.0.0",
-    "msw": "^2.11.3"
-  }
-}
