@@ -15,12 +15,10 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 app = Flask(__name__)
 # CORS configuration to allow network access
-CORS(app, origins=[
-    "http://localhost:3000",
-    "http://127.0.0.1:3000", 
-    "http://192.168.100.250:3000",  # Your network IP
-    "http://192.168.100.250:3000",  # Ensure network IP is allowed
-], supports_credentials=True, allow_headers=['Content-Type', 'Authorization', 'X-User-Email'])
+# More permissive CORS for development
+CORS(app, origins=["*"], supports_credentials=True, 
+     allow_headers=['Content-Type', 'Authorization', 'X-User-Email'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 # Enhanced logging setup
 logging.basicConfig(
@@ -470,20 +468,25 @@ def scrape_now():
 def get_latest_timetable():
     """Get the latest saved timetable data for a user"""
     try:
+        logger.info(f"Timetable request received - Headers: {dict(request.headers)}")
         user, error_response, status_code = get_user_from_request()
         if error_response:
+            logger.warning(f"User validation failed: {error_response}")
             return error_response, status_code
             
+        logger.info(f"Getting timetable for user: {user['email']}")
         # Get latest timetable cache from Supabase
         cache_data = supabase_manager.get_latest_timetable_cache(user['id'])
         
         if not cache_data:
+            logger.info("No cached timetable data found")
             return jsonify({
                 'success': False,
                 'message': 'No cached schedule data found. Run a scrape first.',
                 'timestamp': datetime.now().isoformat()
             }), 404
             
+        logger.info("Returning cached timetable data")
         return jsonify({
             'success': True,
             'data': cache_data,

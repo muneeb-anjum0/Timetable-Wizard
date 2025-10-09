@@ -261,20 +261,20 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 animate-dashboard-enter">
       {/* Header */}
-      <header className="bg-white shadow sticky top-0 z-30">
+      <header className="bg-white shadow sticky top-0 z-30 animate-fall-down">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 sm:py-4">
-            <div className="flex items-center gap-4 mb-2 sm:mb-0">
-              <img src="/logoo.svg" alt="Logo" className="h-9 w-9 sm:h-11 sm:w-11 p-1 bg-white" style={{overflow: 'visible'}} />
-              <div className="flex items-center bg-blue-50 rounded-full px-3 py-1 shadow">
+            <div className="flex items-center gap-4 mb-2 sm:mb-0 animate-fall-down animation-delay-50">
+              <img src="/logoo.svg" alt="Logo" className="h-9 w-9 sm:h-11 sm:w-11 p-1 bg-white transition-transform duration-300 hover:scale-110 animate-fall-down animation-delay-100" style={{overflow: 'visible'}} />
+              <div className="flex items-center bg-blue-50 rounded-full px-3 py-1 shadow transition-all duration-200 hover:shadow-md animate-fall-down animation-delay-150">
                 <span className="text-xs sm:text-sm text-blue-700 font-semibold">Welcome</span>
                 <span className="mx-2 text-xs sm:text-sm font-mono text-blue-900">{user?.email}</span>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-100 rounded-full px-3 py-1 shadow">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 bg-gray-100 rounded-full px-3 py-1 shadow transition-all duration-200 hover:shadow-md animate-fall-down animation-delay-200">
                 <img src="/refresh.svg" alt="Last Updated" className="h-4 w-4 mr-1" />
                 <span>Last updated:</span>
                 <span className="font-mono text-blue-700">{formatLastUpdate(lastUpdate)}</span>
@@ -283,9 +283,9 @@ function AppContent() {
                 <button
                   onClick={runScraper}
                   disabled={isScraperRunning || operationInProgress}
-                  className="inline-flex items-center px-3 sm:px-4 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-full shadow text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                  className="inline-flex items-center px-3 sm:px-4 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-full shadow text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-md animate-fall-down animation-delay-250"
                 >
-                  <img src="/refresh.svg" alt="Refresh" className={`h-4 w-4 mr-2 ${isScraperRunning ? 'animate-spin' : ''}`} />
+                  <img src="/refresh.svg" alt="Refresh" className={`h-4 w-4 mr-2 transition-transform duration-300 ${isScraperRunning ? 'animate-spin' : ''}`} />
                   <span className="hidden sm:inline">
                     {isScraperRunning ? 'Scraping...' : isSemesterUpdateRunning ? 'Updating...' : 'Run Scraper'}
                   </span>
@@ -295,7 +295,7 @@ function AppContent() {
                 </button>
                 <button
                   onClick={() => setShowSemesterManager(true)}
-                  className={`inline-flex items-center px-3 py-2 border text-xs sm:text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition ${
+                  className={`inline-flex items-center px-3 py-2 border text-xs sm:text-sm font-medium rounded-full text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition-all duration-200 hover:shadow-md animate-fall-down animation-delay-300 ${
                     timetableData && config && (!config.semester_filter || config.semester_filter.length === 0) 
                       ? 'animate-pulse-glow-blue border-blue-400' 
                       : 'border-gray-300'
@@ -304,27 +304,27 @@ function AppContent() {
                   <img src="/setting.svg" alt="Settings" className="h-4 w-4 mr-2" />
                   <span className="hidden sm:inline">Semesters </span>({config?.semester_filter?.length || 0})
                 </button>
-                <div className="relative inline-block">
+                <div className="relative inline-block animate-fall-down animation-delay-350">
                   <button
                     onClick={handleLogoutClick}
-                    className="flex items-center space-x-1 text-gray-600 hover:text-red-600 px-3 py-2 rounded-full hover:bg-red-50 transition-colors text-xs sm:text-sm border border-gray-200"
+                    className="flex items-center space-x-1 text-gray-600 hover:text-red-600 px-3 py-2 rounded-full hover:bg-red-50 transition-all duration-200 text-xs sm:text-sm border border-gray-200 hover:shadow-md"
                   >
                     <img src="/logout.svg" alt="Logout" className="h-4 w-4" />
                     <span>Sign Out</span>
                   </button>
                   {showLogoutConfirm && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 text-center">
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 text-center animate-modal-enter">
                       <div className="text-gray-700 mb-3 text-sm">Are you sure you want to sign out?</div>
                       <div className="flex justify-center gap-2">
                         <button
                           onClick={handleLogoutCancel}
-                          className="inline-flex items-center px-3 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-full shadow text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition"
+                          className="inline-flex items-center px-3 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-full shadow text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition-colors duration-200"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={handleLogoutConfirm}
-                          className="inline-flex items-center px-3 py-2 border-2 border-red-400 text-xs sm:text-sm font-medium rounded-full shadow text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400 transition"
+                          className="inline-flex items-center px-3 py-2 border-2 border-red-400 text-xs sm:text-sm font-medium rounded-full shadow text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400 transition-colors duration-200"
                         >
                           Sign Out
                         </button>
@@ -342,36 +342,36 @@ function AppContent() {
       <main className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-4 sm:space-y-6">
           
-          {/* Status Indicator */}
-          {message && (
+          {/* Status Indicator - Always show when config is available */}
+          {config && (
             <div>
               <StatusIndicator 
-                status={status === 'loading' ? 'loading' : status === 'success' ? 'success' : status === 'warning' ? 'warning' : 'error'} 
-                message={message} 
+                status={status === 'loading' ? 'loading' : status === 'success' ? 'success' : status === 'warning' ? 'warning' : status === 'error' ? 'error' : 'success'} 
+                message={message || (config.semester_filter && config.semester_filter.length > 0 ? `${config.semester_filter.length} semester(s) configured` : 'Ready to configure semesters')} 
               />
             </div>
           )}
 
-          {/* Summary Stats - Always show when we have data or when config is loaded and no semesters configured */}
-          {(timetableData || (config && noSemestersConfigured)) && (
+          {/* Summary Stats - Always show when config is available */}
+          {config && (
             <div>
-              {timetableData ? (
+              {timetableData && !isScraperRunning ? (
                 <SummaryStats data={timetableData} config={config || undefined} />
               ) : (
                 // Show placeholder stats when no semesters configured
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="bg-white overflow-hidden shadow rounded-lg transition-all duration-300 hover:shadow-md">
                     <div className="p-5">
                       <div className="flex items-center">
                         <div className="flex-shrink-0">
-                          <img src="/courses.svg" alt="Total Classes" className="w-8 h-8" />
+                          <img src="/courses.svg" alt="Total Classes" className="w-8 h-8 opacity-50" />
                         </div>
                         <div className="ml-5 w-0 flex-1">
                           <dl>
                             <dt className="text-sm font-medium text-gray-500 truncate">
                               Total Classes
                             </dt>
-                            <dd className="text-lg font-medium text-gray-900">
+                            <dd className="text-lg font-medium text-gray-400">
                               0
                             </dd>
                           </dl>
@@ -380,18 +380,18 @@ function AppContent() {
                     </div>
                   </div>
 
-                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="bg-white overflow-hidden shadow rounded-lg transition-all duration-300 hover:shadow-md">
                     <div className="p-5">
                       <div className="flex items-center">
                         <div className="flex-shrink-0">
-                          <img src="/uniqueCourses.svg" alt="Unique Courses" className="w-8 h-8" />
+                          <img src="/uniqueCourses.svg" alt="Unique Courses" className="w-8 h-8 opacity-50" />
                         </div>
                         <div className="ml-5 w-0 flex-1">
                           <dl>
                             <dt className="text-sm font-medium text-gray-500 truncate">
                               Unique Courses
                             </dt>
-                            <dd className="text-lg font-medium text-gray-900">
+                            <dd className="text-lg font-medium text-gray-400">
                               0
                             </dd>
                           </dl>
@@ -400,18 +400,18 @@ function AppContent() {
                     </div>
                   </div>
 
-                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="bg-white overflow-hidden shadow rounded-lg transition-all duration-300 hover:shadow-md">
                     <div className="p-5">
                       <div className="flex items-center">
                         <div className="flex-shrink-0">
-                          <img src="/faculty.svg" alt="Faculty Members" className="w-8 h-8" />
+                          <img src="/faculty.svg" alt="Faculty Members" className="w-8 h-8 opacity-50" />
                         </div>
                         <div className="ml-5 w-0 flex-1">
                           <dl>
                             <dt className="text-sm font-medium text-gray-500 truncate">
                               Faculty Members
                             </dt>
-                            <dd className="text-lg font-medium text-gray-900">
+                            <dd className="text-lg font-medium text-gray-400">
                               0
                             </dd>
                           </dl>
@@ -420,18 +420,18 @@ function AppContent() {
                     </div>
                   </div>
 
-                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                  <div className="bg-white overflow-hidden shadow rounded-lg transition-all duration-300 hover:shadow-md">
                     <div className="p-5">
                       <div className="flex items-center">
                         <div className="flex-shrink-0">
-                          <img src="/day.svg" alt="Day" className="w-8 h-8" />
+                          <img src="/day.svg" alt="Day" className="w-8 h-8 opacity-50" />
                         </div>
                         <div className="ml-5 w-0 flex-1">
                           <dl>
                             <dt className="text-sm font-medium text-gray-500 truncate">
                               Day
                             </dt>
-                            <dd className="text-lg font-medium text-gray-900">
+                            <dd className="text-lg font-medium text-gray-400">
                               Wednesday
                             </dd>
                           </dl>
@@ -440,10 +440,10 @@ function AppContent() {
                     </div>
                   </div>
 
-                  <div className="bg-white overflow-hidden shadow rounded-lg col-span-1 md:col-span-2 lg:col-span-4">
+                  <div className="bg-white overflow-hidden shadow rounded-lg col-span-1 md:col-span-2 lg:col-span-4 transition-all duration-300 hover:shadow-md">
                     <div className="p-5">
                       <div className="flex items-center mb-2">
-                        <span className="font-semibold text-gray-700 text-base">Semester Breakdown</span>
+                        <span className="font-semibold text-gray-500 text-base">Semester Breakdown</span>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <span className="text-gray-400 text-xs">No semester data available</span>
@@ -455,8 +455,8 @@ function AppContent() {
             </div>
           )}
 
-          {/* Timetable - Only show if config is loaded and semesters are configured */}
-          {config && !noSemestersConfigured && (
+          {/* Timetable - Only show if config is loaded, semesters are configured, scraper is NOT running, and timetable data is present */}
+          {config && !noSemestersConfigured && !isScraperRunning && timetableData && timetableData.items && timetableData.items.length > 0 && (
             <div className="bg-white shadow overflow-hidden rounded-md sm:rounded-lg">
               <div className="px-4 py-4 lg:px-6 border-b border-gray-100 bg-blue-50 rounded-t-lg">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -471,33 +471,22 @@ function AppContent() {
                   </div>
                 </div>
               </div>
-              
               <div className="p-0">
-                {timetableData ? (
-                  <TimetableTable items={timetableData.items} />
-                ) : (
-                  <div className="text-center py-8 sm:py-12 px-4">
-                    <img src="/day.svg" alt="Calendar" className="mx-auto h-8 w-8 sm:h-12 sm:w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No schedule data</h3>
-                    <p className="mt-1 text-xs sm:text-sm text-gray-500">
-                      Click "Run Scraper" to fetch the latest schedule from your email.
-                    </p>
-                  </div>
-                )}
+                <TimetableTable items={timetableData.items} />
               </div>
             </div>
           )}
 
-          {/* No Semesters Configured - Show Add Semesters Prompt */}
-          {noSemestersConfigured && (
-            <div className="bg-white rounded-lg shadow p-8 text-center">
-              <div className="text-gray-500 mb-4">
-                <img src="/setting.svg" alt="Setting" className="mx-auto mb-4 h-16 w-16 text-blue-400" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Configure Semesters to View Schedule</h3>
-                <p className="text-gray-500 mb-6">You have schedule data available, but you need to add semesters to organize and filter your classes properly.</p>
+          {/* Show Configure Semesters card when: no semesters configured, scraper running, semester update running, or no timetable data */}
+          {(noSemestersConfigured || isScraperRunning || isSemesterUpdateRunning || !timetableData || !timetableData.items || timetableData.items.length === 0) && (
+            <div className="bg-white rounded-lg shadow p-8 text-center animate-fall-down animation-delay-500">
+              <div className="text-gray-500 mb-4 animate-fall-down animation-delay-550">
+                <img src="/setting.svg" alt="Setting" className="mx-auto mb-4 h-16 w-16 text-blue-400 animate-fall-down animation-delay-600" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2 animate-fall-down animation-delay-650">Configure Semesters to View Schedule</h3>
+                <p className="text-gray-500 mb-6 animate-fall-down animation-delay-700">You have schedule data available, but you need to add semesters to organize and filter your classes properly.</p>
                 <button
                   onClick={() => setShowSemesterManager(true)}
-                  className="inline-flex items-center px-3 sm:px-4 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-full shadow text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition"
+                  className="inline-flex items-center px-3 sm:px-4 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-full shadow text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition-all duration-200 hover:shadow-md hover:scale-105 animate-fall-down animation-delay-750"
                 >
                   <img src="/add.svg" alt="Add" className="h-4 w-4 mr-2" />
                   <span className="hidden sm:inline">Add Semesters</span>

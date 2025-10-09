@@ -3,12 +3,14 @@ SZABIST schedule parser (tolerant).
 - Finds the biggest "schedule-like" table even if headers are odd.
 - Maps columns by name when possible, else falls back to common positions.
 - If ALLOWED_SEMESTERS is empty, returns ALL sensible rows.
+- Enhanced with flexible semester matching for various formatting.
 """
 
 from bs4 import BeautifulSoup
 from typing import List, Dict, Optional
 import re
 from .config import settings
+from .semester_matcher import flexible_semester_match, normalize_semester, tokenize_semester
 
 WS = re.compile(r"\s+")
 NON_ALNUM = re.compile(r"[^A-Za-z0-9]+")
@@ -117,23 +119,35 @@ def parse_schedule_text(text: str, semesters: List[str]) -> List[Dict]:
     while i < len(schedule_lines):
         line_num, line = schedule_lines[i]
         
-        # Look for semester/class section in the line
+        # Look for semester/class section in the line with flexible matching
         line_upper = line.upper()
         keep = False
         match_reason = ""
         semester_found = ""
         
         if want:
-            for w in want:
-                # Convert back to find the original semester string in the line
+            # Use flexible semester matching for better accuracy
+            if flexible_semester_match(line, line, semesters):
+                keep = True
+                match_reason = "flexible semester match found in line"
+                # Find which semester matched
                 for orig_sem in semesters:
-                    if _tok(orig_sem) == w and orig_sem.upper() in line_upper:
-                        keep = True
-                        match_reason = f"semester match: '{orig_sem}' found in line"
-                        semester_found = orig_sem
+                    if flexible_semester_match(line, line, [orig_sem]):
+                        semester_found = normalize_semester(orig_sem)
                         break
-                if keep:
-                    break
+            
+            # Fallback to original tokenized matching if flexible matching fails
+            if not keep:
+                for w in want:
+                    # Convert back to find the original semester string in the line
+                    for orig_sem in semesters:
+                        if _tok(orig_sem) == w and orig_sem.upper() in line_upper:
+                            keep = True
+                            match_reason = f"token match: '{orig_sem}' found in line"
+                            semester_found = orig_sem
+                            break
+                    if keep:
+                        break
         else:
             # No filter - keep lines that look like class schedules
             has_time = time_pattern.search(line)
@@ -427,20 +441,26 @@ def parse_schedule_html(html: str, semesters: List[str]) -> List[Dict]:
         match_reason = ""
         
         if want:
-            # exact or contains either way to survive spacing/formatting differences
-            for w in want:
-                if class_tok == w:
-                    keep = True
-                    match_reason = f"exact match: '{class_tok}' == '{w}'"
-                    break
-                elif class_tok and w in class_tok:
-                    keep = True
-                    match_reason = f"contains match: '{w}' in '{class_tok}'"
-                    break
-                elif class_tok and class_tok in w:
-                    keep = True
-                    match_reason = f"reverse contains: '{class_tok}' in '{w}'"
-                    break
+            # First try flexible semester matching
+            if flexible_semester_match(class_section, " ".join(cells), semesters):
+                keep = True
+                match_reason = f"flexible semester match: '{class_section}'"
+            
+            # Fallback to original exact/contains matching
+            if not keep:
+                for w in want:
+                    if class_tok == w:
+                        keep = True
+                        match_reason = f"exact token match: '{class_tok}' == '{w}'"
+                        break
+                    elif class_tok and w in class_tok:
+                        keep = True
+                        match_reason = f"contains match: '{w}' in '{class_tok}'"
+                        break
+                    elif class_tok and class_tok in w:
+                        keep = True
+                        match_reason = f"reverse contains: '{class_tok}' in '{w}'"
+                        break
             
             if not keep:
                 logger.debug(f"Row {processed_rows}: No semester match - wanted {want}, got '{class_tok}'")

@@ -19,7 +19,7 @@ from apscheduler.triggers.cron import CronTrigger
 from dateutil import tz
 
 from .gmail_client import get_credentials, build_service, list_messages, get_message_html
-from .parser import parse_schedule_html
+from .enhanced_parser import parse_schedule_enhanced
 
 LOGGER = logging.getLogger(__name__)
 
@@ -233,8 +233,8 @@ def run_once(user_email: str = "me", show_table: bool = False, user_id: Optional
             LOGGER.warning("HTML content is empty or None")
 
         LOGGER.info(f"Parsing HTML with semester filters: {allowed_semesters}")
-        items = parse_schedule_html(html, allowed_semesters)
-        LOGGER.info(f"Parsed {len(items)} schedule items")
+        items = parse_schedule_enhanced(html, allowed_semesters)
+        LOGGER.info(f"Parsed {len(items)} schedule items with enhanced validation")
 
         # Create summary statistics
         semester_counts = {}

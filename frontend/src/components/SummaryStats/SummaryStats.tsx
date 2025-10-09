@@ -26,7 +26,7 @@ const SummaryStats: React.FC<SummaryStatsProps> = ({ data, config }) => {
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <div className="bg-white overflow-hidden shadow rounded-lg">
+      <div className="bg-white overflow-hidden shadow rounded-lg transition-all duration-300 hover:shadow-md hover:scale-105 animate-fall-down animation-delay-200">
         <div className="p-5">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -46,7 +46,7 @@ const SummaryStats: React.FC<SummaryStatsProps> = ({ data, config }) => {
         </div>
       </div>
 
-      <div className="bg-white overflow-hidden shadow rounded-lg">
+      <div className="bg-white overflow-hidden shadow rounded-lg transition-all duration-300 hover:shadow-md hover:scale-105 animate-fall-down animation-delay-250">
         <div className="p-5">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -66,7 +66,7 @@ const SummaryStats: React.FC<SummaryStatsProps> = ({ data, config }) => {
         </div>
       </div>
 
-      <div className="bg-white overflow-hidden shadow rounded-lg">
+      <div className="bg-white overflow-hidden shadow rounded-lg transition-all duration-300 hover:shadow-md hover:scale-105 animate-fall-down animation-delay-300">
         <div className="p-5">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -86,7 +86,7 @@ const SummaryStats: React.FC<SummaryStatsProps> = ({ data, config }) => {
         </div>
       </div>
 
-      <div className="bg-white overflow-hidden shadow rounded-lg">
+      <div className="bg-white overflow-hidden shadow rounded-lg transition-all duration-300 hover:shadow-md hover:scale-105 animate-fall-down animation-delay-350">
         <div className="p-5">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -106,7 +106,7 @@ const SummaryStats: React.FC<SummaryStatsProps> = ({ data, config }) => {
         </div>
       </div>
 
-      <div className="bg-white overflow-hidden shadow rounded-lg col-span-1 md:col-span-2 lg:col-span-4">
+      <div className="bg-white overflow-hidden shadow rounded-lg col-span-1 md:col-span-2 lg:col-span-4 transition-all duration-300 hover:shadow-md animate-fall-down animation-delay-400">
         <div className="p-5">
           <div className="flex items-center mb-2">
             <span className="font-semibold text-gray-700 text-base">Semester Breakdown</span>
@@ -114,7 +114,7 @@ const SummaryStats: React.FC<SummaryStatsProps> = ({ data, config }) => {
           <div className="flex flex-wrap gap-2">
             {Object.entries(displaySummary.semester_breakdown).length > 0 ? (
               Object.entries(displaySummary.semester_breakdown).map(([semester, count]) => (
-                <span key={semester} className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200 shadow-sm">
+                <span key={semester} className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200 shadow-sm transition-colors duration-200 hover:bg-blue-100">
                   {semester}
                   <span className="ml-2 bg-blue-200 text-blue-900 rounded-full px-2 py-0.5 text-xs font-bold">{count}</span>
                 </span>
