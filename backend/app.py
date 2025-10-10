@@ -548,18 +548,9 @@ def get_status():
         }), 500
 
 if __name__ == '__main__':
-    # For Railway deployment, use the PORT environment variable
     port = int(os.environ.get('PORT', 5000))
-    # Enable debug only in development
-    debug_mode = os.environ.get('FLASK_ENV') != 'production'
-    
     print(f"Starting server on 0.0.0.0:{port}")
-    print(f"Debug mode: {debug_mode}")
     print(f"Access URLs:")
     print(f"  Local: http://localhost:{port}")
-    if not debug_mode:
-        print(f"  Production: Running on Railway")
-    else:
-        print(f"  Network: http://192.168.100.250:{port}")
-    
-    app.run(host='0.0.0.0', port=port, debug=debug_mode, threaded=True)
+    print(f"  Network: http://192.168.100.250:{port}")
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
