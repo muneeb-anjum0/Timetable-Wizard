@@ -1,4 +1,4 @@
-# Root Dockerfile for Railway Backend
+# Backend Dockerfile for Railway
 FROM python:3.11-slim
 
 # Set working directory
