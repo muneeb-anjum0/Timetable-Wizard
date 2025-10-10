@@ -46,5 +46,3 @@ python -m src.scraper.main --run-scheduler
 
 
 
-so help me for Deploying backend and frontend BOTH on railway...
-Give me A-Z everything for env variables that I need to enter there to how to create a project and what folder to import for backend and update the files accordingly to accomodate everything as well

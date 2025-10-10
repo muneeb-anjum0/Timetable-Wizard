@@ -1,0 +1,9 @@
+# Railway Frontend Configuration
+[build]
+  builder = "DOCKERFILE"
+  dockerfilePath = "Dockerfile"
+
+[deploy]
+  startCommand = "serve -s build -l $PORT"
+  restartPolicyType = "ON_FAILURE"
+  restartPolicyMaxRetries = 10

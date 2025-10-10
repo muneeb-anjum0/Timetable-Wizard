@@ -1,17 +1,18 @@
 import axios, { AxiosResponse } from 'axios';
 import { ApiResponse, TimetableData, ConfigData, StatusData } from '../types/api';
 
-// Dynamic API base URL - uses the same host as the frontend but port 5000
+// Dynamic API base URL - supports both local development and Railway deployment
 const getApiBaseUrl = () => {
   const hostname = window.location.hostname;
   
-  // Always use the same hostname but with port 5000 for the API
+  // For local development
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:5000';
   }
   
-  // For network access (like 192.168.x.x), use the same IP with port 5000
-  return `http://${hostname}:5000`;
+  // For Railway deployment, use the backend service URL
+  // Railway will inject REACT_APP_API_URL as environment variable
+  return process.env.REACT_APP_API_URL || `http://${hostname}:5000`;
 };
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || getApiBaseUrl();
