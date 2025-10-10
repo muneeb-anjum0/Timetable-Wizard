@@ -10,8 +10,7 @@ from datetime import datetime
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-# Add the src directory to Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Backend imports are now local since all backend code is in this directory
 
 app = Flask(__name__)
 # CORS configuration to allow network access
@@ -90,7 +89,7 @@ def gmail_auth():
         os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
         
         # Load client secrets
-        client_secrets_file = os.path.join(os.path.dirname(__file__), '..', 'credentials', 'client_secret.json')
+        client_secrets_file = os.path.join(os.path.dirname(__file__), 'credentials', 'client_secret.json')
         
         if not os.path.exists(client_secrets_file):
             return jsonify({'error': 'Client secrets file not found'}), 500
@@ -137,7 +136,7 @@ def gmail_callback():
         os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
         
         # Load client secrets
-        client_secrets_file = os.path.join(os.path.dirname(__file__), '..', 'credentials', 'client_secret.json')
+        client_secrets_file = os.path.join(os.path.dirname(__file__), 'credentials', 'client_secret.json')
         
         # Create flow instance
         flow = Flow.from_client_secrets_file(

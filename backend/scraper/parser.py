@@ -42,7 +42,7 @@ def parse_schedule_text(text: str, semesters: List[str]) -> List[Dict]:
     
     # Enhanced patterns for better data extraction
     time_pattern = re.compile(r'\b(\d{1,2}:\d{2}\s*(?:AM|PM)\s*[-–—→]\s*\d{1,2}:\d{2}\s*(?:AM|PM))\b', re.IGNORECASE)
-    room_pattern = re.compile(r'\b(\d{3}|Lab\s*\d+|Digital\s*Lab|TV\s*Studio|NB-\d+|OB-\d+|Cancelled|Canceled)\b', re.IGNORECASE)
+    room_pattern = re.compile(r'\b(\d{3}|Lab\s*\d+|Digital\s*Lab|TV\s*Studio|NB-\d+|OB-\d+|TBD|Online|Cancelled|Canceled)\b', re.IGNORECASE)
     course_pattern = re.compile(r'\b([A-Z]{2,4}\s*[A-Z]*\d{2,4})\b')  # Handle codes like 'CSC TE01'
     
     # Create a comprehensive mapping of all schedule data in the text
@@ -589,7 +589,7 @@ def _extract_faculty_szabist(line: str, course_match, credit_match) -> Optional[
             
             # Check for room patterns that should stop faculty collection
             # But handle "Digital Lab" carefully - it could be room or part of name
-            if re.match(r'^\d{3}$|^Lab$|^NB-\d+$|^Hall$|^TV$|^Studio$', word, re.IGNORECASE):
+            if re.match(r'^\d{3}$|^Lab$|^NB-\d+$|^Hall$|^TV$|^Studio$|^TBD$|^Online$|^Cancelled$|^Canceled$', word, re.IGNORECASE):
                 if word.lower() == 'lab' and i > 0:
                     # Check if previous word is "Digital" which would make "Digital Lab" a room
                     if words[i-1].lower() == 'digital':
@@ -599,6 +599,9 @@ def _extract_faculty_szabist(line: str, course_match, credit_match) -> Optional[
                     break
                 elif word.lower() == 'digital' and i + 1 < len(words) and words[i + 1].lower() == 'lab':
                     # "Digital Lab" detected - this is a room, not part of name
+                    break
+                elif word.upper() in ['TBD', 'ONLINE', 'CANCELLED', 'CANCELED']:
+                    # Room/status detected - stop faculty collection
                     break
                 else:
                     break
@@ -636,8 +639,8 @@ def _extract_faculty_szabist(line: str, course_match, credit_match) -> Optional[
         cleaned = re.sub(r'SZABIST\s+(?:University\s+Campus|HMB).*$', '', cleaned, flags=re.IGNORECASE).strip()
         
         # Remove room patterns from the end to isolate title and faculty
-        # This handles cases like "Lab 01", "Digital Lab", "301", "NB-208", etc.
-        cleaned = re.sub(r'\b(?:Lab\s*\d+|Digital\s*Lab|\d{3}|NB-\d+|OB-\d+|TV\s*Studio|Media\s*Lab)\s*$', '', cleaned, flags=re.IGNORECASE).strip()
+        # This handles cases like "Lab 01", "Digital Lab", "301", "NB-208", "TBD", "Online", "Cancelled", etc.
+        cleaned = re.sub(r'\b(?:Lab\s*\d+|Digital\s*Lab|\d{3}|NB-\d+|OB-\d+|TV\s*Studio|Media\s*Lab|TBD|Online|Cancelled|Canceled)\s*$', '', cleaned, flags=re.IGNORECASE).strip()
         
         # Now we should have: [Course Title] [Faculty Name]
         # Strategy: Look for common course title patterns and faculty name patterns
@@ -708,14 +711,18 @@ def _extract_room_szabist(line: str, faculty_name: str, course_match, credit_mat
         if len(parts) > 1:
             after_faculty = parts[1].strip()
             # Look for room patterns in what comes after faculty
-            room_match = re.search(r'\b(Digital\s*Lab|Lab\s*\d+|\d{3}|NB-\d+|OB-\d+|TV\s*Studio)\b', after_faculty, re.IGNORECASE)
+            room_match = re.search(r'\b(Digital\s*Lab|Lab\s*\d+|\d{3}|NB-\d+|OB-\d+|TV\s*Studio|TBD|Online)\b', after_faculty, re.IGNORECASE)
             if room_match:
-                return room_match.group(1)
+                room = room_match.group(1)
+                # Convert TBD to Online for consistency
+                return "Online" if room.upper() == "TBD" else room
     
     # Fallback: look for any room pattern in the search area
-    room_match = re.search(r'\b(Digital\s*Lab|Lab\s*\d+|\d{3}|NB-\d+|OB-\d+|TV\s*Studio)\b', search_area, re.IGNORECASE)
+    room_match = re.search(r'\b(Digital\s*Lab|Lab\s*\d+|\d{3}|NB-\d+|OB-\d+|TV\s*Studio|TBD|Online)\b', search_area, re.IGNORECASE)
     if room_match:
-        return room_match.group(1)
+        room = room_match.group(1)
+        # Convert TBD to Online for consistency
+        return "Online" if room.upper() == "TBD" else room
     
     return None
 

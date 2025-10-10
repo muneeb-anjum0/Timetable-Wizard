@@ -154,13 +154,17 @@ class DataCorrector:
                 r'\b(Computer\s+Lab)\b',               # Computer Lab
                 r'\b(\d{3})\b',                        # Room numbers like 302
                 r'\b(NB-\d+|OB-\d+)\b',               # Building codes
+                r'\b(TBD)\b',                          # TBD rooms (treat as online)
+                r'\b(Online|Virtual)\b',               # Online classes
                 r'\b(Lab\s+\w+)\b'                     # Other lab variations
             ]
             
             for pattern in room_patterns:
                 match = re.search(pattern, raw_text, re.IGNORECASE)
                 if match:
-                    return match.group(1)
+                    room = match.group(1)
+                    # Convert TBD to Online for consistency
+                    return 'Online' if room.upper() == 'TBD' else room
         
         # Fallback based on course type
         if ('L' in course or 'lab' in course_title.lower()):

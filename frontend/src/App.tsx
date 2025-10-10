@@ -432,7 +432,7 @@ function AppContent() {
                               Day
                             </dt>
                             <dd className="text-lg font-medium text-gray-400">
-                              Wednesday
+                              {new Date().toLocaleDateString(undefined, { weekday: 'long' })}
                             </dd>
                           </dl>
                         </div>
@@ -477,8 +477,8 @@ function AppContent() {
             </div>
           )}
 
-          {/* Show Configure Semesters card when: no semesters configured, scraper running, semester update running, or no timetable data */}
-          {(noSemestersConfigured || isScraperRunning || isSemesterUpdateRunning || !timetableData || !timetableData.items || timetableData.items.length === 0) && (
+          {/* Show Configure Semesters card when no semesters are configured and either timetableData exists or scraper is running */}
+          {(noSemestersConfigured && (timetableData || isScraperRunning)) && (
             <div className="bg-white rounded-lg shadow p-8 text-center animate-fall-down animation-delay-500">
               <div className="text-gray-500 mb-4 animate-fall-down animation-delay-550">
                 <img src="/setting.svg" alt="Setting" className="mx-auto mb-4 h-16 w-16 text-blue-400 animate-fall-down animation-delay-600" />

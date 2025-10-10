@@ -34,18 +34,18 @@ const LoginScreen: React.FC = () => {
   };
 
   return (
-  <div className={`min-h-screen bg-white flex items-center justify-center p-4 ${isExiting ? 'animate-login-exit' : 'animate-fade-in'}`}>
+  <div className={`min-h-screen bg-white flex items-center justify-center p-4 ${isExiting ? 'animate-login-exit' : 'animate-fall-down'}`}>
       <div className="max-w-md w-full">
-        <div className={`bg-white rounded-3xl shadow-2xl p-10 border border-gray-100 ${isExiting ? '' : 'animate-fade-in-up'}`}>
+  <div className={`bg-white rounded-3xl shadow-2xl p-10 border border-gray-100 ${isExiting ? '' : 'animate-fall-down animation-delay-100'}`}>
           {/* Header */}
           <div className="text-center mb-10">
-            <div className="w-24 h-24 flex items-center justify-center mx-auto mb-4 rounded-full bg-white shadow-sm animate-gentle-scale">
+            <div className="w-24 h-24 flex items-center justify-center mx-auto mb-4 rounded-full bg-white shadow-sm animate-fall-down animation-delay-150">
               <img src="/logoo.svg" alt="Logo" className="w-16 h-16 object-contain p-2" />
             </div>
-            <h1 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight animate-fade-in animation-delay-200">
+            <h1 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight animate-fall-down animation-delay-200">
               Timetable Wizard
             </h1>
-            <p className="text-base text-gray-600 font-medium animate-fade-in animation-delay-300">
+            <p className="text-base text-gray-600 font-medium animate-fall-down animation-delay-300">
               Sign in to access your university timetable
             </p>
           </div>
@@ -54,7 +54,7 @@ const LoginScreen: React.FC = () => {
           <button
             onClick={handleGmailLogin}
             disabled={isLoading}
-            className="w-full bg-white hover:bg-gray-50 disabled:bg-gray-200 disabled:cursor-not-allowed text-gray-900 font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg border border-gray-300 hover:scale-105 hover:shadow-xl animate-fade-in animation-delay-400"
+            className="w-full bg-white hover:bg-gray-50 disabled:bg-gray-200 disabled:cursor-not-allowed text-gray-900 font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg border border-gray-300 hover:scale-105 hover:shadow-xl animate-fall-down animation-delay-400"
           >
             {isLoading ? (
               <>
@@ -77,7 +77,7 @@ const LoginScreen: React.FC = () => {
           )}
 
           {/* Footer */}
-          <div className="mt-10 text-center animate-fade-in animation-delay-500">
+          <div className="mt-10 text-center">
             <p className="text-sm text-gray-500 mb-2">
               Sign in with Gmail to view your timetable.
             </p>

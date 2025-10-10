@@ -105,6 +105,7 @@ export const extractRoomFromRawData = (item: TimetableItem): string | null => {
     /\b(Room\s+\d+)\b/i,                   // Room 302
     /\b([A-Z]{2}-\d+)\b/i,                 // NB-01, OB-05
     /\b(\d{3})\b/,                         // 302, 401 (room numbers)
+    /\b(TBD)\b/i,                          // TBD rooms (treat as online)
     /\b(Online|Virtual)\b/i,               // Online classes
     /\b(Cancelled|Canceled)\b/i,           // Cancelled classes
     /\b(Lab\s+\w+)\b/i                     // Other lab variations
@@ -113,7 +114,9 @@ export const extractRoomFromRawData = (item: TimetableItem): string | null => {
   for (const pattern of roomPatterns) {
     const match = rawText.match(pattern);
     if (match) {
-      return match[1];
+      const room = match[1];
+      // Convert TBD to Online for consistency
+      return room.toUpperCase() === 'TBD' ? 'Online' : room;
     }
   }
   
@@ -236,13 +239,16 @@ export const generateRoomFallback = (item: TimetableItem): string => {
       /\b(Computer\s+Lab)\b/i,     // Computer Lab
       /\b(\d{3})\b/,               // Room numbers like 302
       /\b(NB-\d+|OB-\d+)\b/i,     // Building codes
+      /\b(TBD)\b/i,                // TBD rooms (treat as online)
       /\b(Lab\s+\w+)\b/i           // Other lab variations
     ];
     
     for (const pattern of roomPatterns) {
       const match = rawText.match(pattern);
       if (match) {
-        return match[1];
+        const room = match[1];
+        // Convert TBD to Online for consistency
+        return room.toUpperCase() === 'TBD' ? 'Online' : room;
       }
     }
   }

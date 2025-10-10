@@ -55,6 +55,11 @@ const getDisplayTime = (item: TimetableItem): string => {
 const getDisplayRoom = (item: TimetableItem): string => {
   let room = item.room;
   
+  // Convert TBD to Online for consistency
+  if (room && room.toUpperCase() === 'TBD') {
+    room = 'Online';
+  }
+  
   // For CSCL 2205, always use the corrected value from the original email
   if (item.course === 'CSCL 2205') {
     return getCorrectedValue('room', item) || room || 'TBD';
@@ -234,9 +239,18 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
                           </p>
                         </div>
                         <div className="ml-2 flex-shrink-0">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            {getDisplayRoom(item)}
-                          </span>
+                          {(() => {
+                            const roomDisplay = getDisplayRoom(item);
+                            const isOnline = roomDisplay.toLowerCase() === 'online';
+                            return (
+                              <span className={isOnline 
+                                ? "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 border border-green-300 text-green-800" 
+                                : "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                              }>
+                                {roomDisplay}
+                              </span>
+                            );
+                          })()}
                         </div>
                       </div>
                       
@@ -316,7 +330,18 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
                       <span className="text-gray-600">{getDisplayFaculty(item)}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <span className="bg-gray-100 rounded px-2 py-1 text-xs text-gray-800">{getDisplayRoom(item)}</span>
+                      {(() => {
+                        const roomDisplay = getDisplayRoom(item);
+                        const isOnline = roomDisplay.toLowerCase() === 'online';
+                        return (
+                          <span className={isOnline 
+                            ? "bg-green-100 border border-green-300 rounded px-2 py-1 text-xs text-green-800 font-medium" 
+                            : "bg-gray-100 rounded px-2 py-1 text-xs text-gray-800"
+                          }>
+                            {roomDisplay}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <span className="text-gray-600 font-mono">{getDisplayTime(item)}</span>

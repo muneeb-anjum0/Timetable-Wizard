@@ -9,8 +9,8 @@ from datetime import datetime
 # Import your app
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+# Add the backend directory to Python path (parent of tests)
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from app import app, get_user_from_request
 
