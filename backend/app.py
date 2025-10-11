@@ -2,6 +2,8 @@
 Flask backend for TimeTable Scraper with Multi-User Support
 Provides RESTful API endpoints for the React frontend
 """
+print("Starting app.py import...")
+
 import os
 import sys
 import json
@@ -10,14 +12,20 @@ from datetime import datetime
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+print("Basic imports completed...")
+
 # Backend imports are now local since all backend code is in this directory
 
 app = Flask(__name__)
+print("Flask app created...")
+
 # CORS configuration to allow network access
 # More permissive CORS for development
 CORS(app, origins=["*"], supports_credentials=True, 
      allow_headers=['Content-Type', 'Authorization', 'X-User-Email'],
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+
+print("CORS configured...")
 
 # Enhanced logging setup
 logging.basicConfig(
