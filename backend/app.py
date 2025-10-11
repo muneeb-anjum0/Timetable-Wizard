@@ -60,6 +60,7 @@ def get_user_from_request():
 @app.route('/', methods=['GET'])
 def root():
     """Simple root endpoint for testing"""
+    print("ROOT ENDPOINT CALLED")  # Debug print
     return jsonify({'status': 'ok', 'message': 'Timetable Wizard API is running'})
 
 @app.route('/api/health', methods=['GET'])
