@@ -25,9 +25,9 @@ USER app
 # Expose port
 EXPOSE 5000
 
-# Health check that uses port 5000
+# Health check that uses the runtime PORT (fallback to 5000)
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/ || exit 1
+    CMD /bin/sh -c 'curl -f http://localhost:${PORT:-5000}/ || exit 1'
 
 # Simple startup - run fallback simple_app directly (avoids startCommand expansion issues)
 CMD ["python", "simple_app.py"]
