@@ -1,3 +1,5 @@
+# Ignore credentials that shouldn't be checked into the repo
+backend/credentials/client_secret.json
 # Python
 __pycache__/
 *.py[cod]

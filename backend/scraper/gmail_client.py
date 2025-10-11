@@ -25,13 +25,30 @@ def get_credentials(token_path: str = "token.json", client_secret_path: str = "c
             LOGGER.info("Refreshing Gmail token...")
             creds.refresh(Request())
         else:
-            if not os.path.exists(client_secret_path):
-                raise FileNotFoundError(
-                    f"Missing OAuth client file at {client_secret_path}. "
-                    f"Download from Google Cloud Console → OAuth 2.0 Client IDs."
-                )
-            flow = InstalledAppFlow.from_client_secrets_file(client_secret_path, SCOPES)
-            creds = flow.run_local_server(port=0)
+            # Prefer environment variables for client id/secret when running in production
+            env_client_id = os.environ.get('GOOGLE_CLIENT_ID')
+            env_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
+            if env_client_id and env_client_secret:
+                LOGGER.info("Using Gmail client credentials from environment variables")
+                client_config = {
+                    "installed": {
+                        "client_id": env_client_id,
+                        "client_secret": env_client_secret,
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "redirect_uris": ["urn:ietf:wg:oauth:2.0:oob", "http://localhost"]
+                    }
+                }
+                flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
+                creds = flow.run_local_server(port=0)
+            else:
+                if not os.path.exists(client_secret_path):
+                    raise FileNotFoundError(
+                        f"Missing OAuth client file at {client_secret_path}. "
+                        f"Provide GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables, or place the client_secret.json file at {client_secret_path}."
+                    )
+                flow = InstalledAppFlow.from_client_secrets_file(client_secret_path, SCOPES)
+                creds = flow.run_local_server(port=0)
         with open(token_path, "w", encoding="utf-8") as token:
             token.write(creds.to_json())
             LOGGER.info("Saved Gmail token to %s", token_path)

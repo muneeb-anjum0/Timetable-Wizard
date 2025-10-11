@@ -147,20 +147,36 @@ def gmail_auth():
         # Allow insecure transport for local development
         os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
         
-        # Load client secrets
-        client_secrets_file = os.path.join(os.path.dirname(__file__), 'credentials', 'client_secret.json')
-        
-        if not os.path.exists(client_secrets_file):
-            return jsonify({'error': 'Client secrets file not found'}), 500
-            
-        # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps
-        flow = Flow.from_client_secrets_file(
-            client_secrets_file,
-            scopes=['https://www.googleapis.com/auth/gmail.readonly',
-                   'https://www.googleapis.com/auth/userinfo.email',
-                   'https://www.googleapis.com/auth/userinfo.profile',
-                   'openid']
-        )
+        # Load client secrets from env vars if available, otherwise fallback to file
+        env_client_id = os.environ.get('GOOGLE_CLIENT_ID')
+        env_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
+        if env_client_id and env_client_secret:
+            from google_auth_oauthlib.flow import Flow as EnvFlow
+            client_config = {
+                "web": {
+                    "client_id": env_client_id,
+                    "client_secret": env_client_secret,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [get_backend_base_url() + "/api/auth/gmail/callback"]
+                }
+            }
+            flow = Flow.from_client_config(client_config, scopes=['https://www.googleapis.com/auth/gmail.readonly',
+                                                                  'https://www.googleapis.com/auth/userinfo.email',
+                                                                  'https://www.googleapis.com/auth/userinfo.profile',
+                                                                  'openid'])
+        else:
+            # Load client secrets file
+            client_secrets_file = os.path.join(os.path.dirname(__file__), 'credentials', 'client_secret.json')
+            if not os.path.exists(client_secrets_file):
+                return jsonify({'error': 'Client secrets file not found'}), 500
+            flow = Flow.from_client_secrets_file(
+                client_secrets_file,
+                scopes=['https://www.googleapis.com/auth/gmail.readonly',
+                       'https://www.googleapis.com/auth/userinfo.email',
+                       'https://www.googleapis.com/auth/userinfo.profile',
+                       'openid']
+            )
         
         # Set the redirect URI dynamically based on environment
         backend_url = get_backend_base_url()
@@ -195,17 +211,32 @@ def gmail_callback():
         # Allow insecure transport for local development
         os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
         
-        # Load client secrets
-        client_secrets_file = os.path.join(os.path.dirname(__file__), 'credentials', 'client_secret.json')
-        
-        # Create flow instance
-        flow = Flow.from_client_secrets_file(
-            client_secrets_file,
-            scopes=['https://www.googleapis.com/auth/gmail.readonly',
-                   'https://www.googleapis.com/auth/userinfo.email',
-                   'https://www.googleapis.com/auth/userinfo.profile',
-                   'openid']
-        )
+        # Load client secrets from env vars if available, otherwise fallback to file
+        env_client_id = os.environ.get('GOOGLE_CLIENT_ID')
+        env_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
+        if env_client_id and env_client_secret:
+            client_config = {
+                "web": {
+                    "client_id": env_client_id,
+                    "client_secret": env_client_secret,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [get_backend_base_url() + "/api/auth/gmail/callback"]
+                }
+            }
+            flow = Flow.from_client_config(client_config, scopes=['https://www.googleapis.com/auth/gmail.readonly',
+                                                                  'https://www.googleapis.com/auth/userinfo.email',
+                                                                  'https://www.googleapis.com/auth/userinfo.profile',
+                                                                  'openid'])
+        else:
+            client_secrets_file = os.path.join(os.path.dirname(__file__), 'credentials', 'client_secret.json')
+            flow = Flow.from_client_secrets_file(
+                client_secrets_file,
+                scopes=['https://www.googleapis.com/auth/gmail.readonly',
+                       'https://www.googleapis.com/auth/userinfo.email',
+                       'https://www.googleapis.com/auth/userinfo.profile',
+                       'openid']
+            )
         # Set redirect URI dynamically based on environment
         backend_url = get_backend_base_url()
         flow.redirect_uri = f"{backend_url}/api/auth/gmail/callback"
