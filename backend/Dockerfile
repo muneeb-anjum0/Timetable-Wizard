@@ -25,9 +25,9 @@ USER app
 # Expose port
 EXPOSE 5000
 
-# Health check that uses the runtime PORT (fallback to 5000)
+# Health check that uses the runtime PORT (fallback to 5000) and target /api/health
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD /bin/sh -c 'curl -f http://localhost:${PORT:-5000}/ || exit 1'
+    CMD /bin/sh -c 'curl -f http://localhost:${PORT:-5000}/api/health || exit 1'
 
-# Use gunicorn to serve the minimal WSGI app (simple_app) on port 5000
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--threads", "2", "--timeout", "30", "simple_app:app"]
+# Use gunicorn to serve the minimal WSGI app (simple_app) and log access/errors to stdout
+CMD ["/bin/bash", "-lc", "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 1 --threads 2 --timeout 30 --access-logfile - --error-logfile - simple_app:app"]
