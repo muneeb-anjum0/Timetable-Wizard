@@ -25,22 +25,23 @@ USER app
 # Expose port
 EXPOSE 5000
 
-# Health check
+# Health check that uses the dynamic port
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/api/health || exit 1
+    CMD curl -f http://localhost:${PORT:-5000}/api/health || exit 1
 
-# Create a startup script
+# Create a startup script that uses Railway's PORT environment variable
 RUN echo '#!/bin/bash\n\
 echo "Starting Flask application..."\n\
 echo "Environment variables:" \n\
 echo "SUPABASE_URL: $SUPABASE_URL" \n\
 echo "SUPABASE_SERVICE_KEY: $(if [ -n "$SUPABASE_SERVICE_KEY" ]; then echo "SET"; else echo "NOT SET"; fi)" \n\
 echo "TZ: $TZ" \n\
-echo "PORT: $PORT (Railway will map this externally)" \n\
+echo "PORT: $PORT (Railway port)" \n\
 echo "Testing Python import..."\n\
 python -c "import sys; print(f\"Python version: {sys.version}\"); import app; print(\"App imported successfully\")" || { echo "Failed to import app"; exit 1; }\n\
-echo "Starting gunicorn on port 5000..."\n\
-exec gunicorn --bind 0.0.0.0:5000 --workers 1 --threads 2 --timeout 30 --keep-alive 2 --log-level info --access-logfile - --error-logfile - app:app' > /app/start.sh && chmod +x /app/start.sh
+PORT=${PORT:-5000}\n\
+echo "Starting gunicorn on port $PORT..."\n\
+exec gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 30 --keep-alive 2 --log-level info --access-logfile - --error-logfile - app:app' > /app/start.sh && chmod +x /app/start.sh
 
 # Start the application
 CMD ["/bin/bash", "/app/start.sh"]

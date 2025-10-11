@@ -81,7 +81,43 @@ def root():
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    return jsonify({'status': 'healthy', 'timestamp': '2025-01-01T00:00:00'})
+    try:
+        print("HEALTH CHECK ENDPOINT CALLED")
+        logger.info("Health check endpoint accessed")
+        
+        # Check basic app functionality
+        current_time = datetime.now().isoformat()
+        
+        # Check environment variables
+        supabase_url = os.environ.get('SUPABASE_URL')
+        supabase_key = os.environ.get('SUPABASE_SERVICE_KEY')
+        
+        health_data = {
+            'status': 'healthy',
+            'timestamp': current_time,
+            'environment': {
+                'supabase_configured': bool(supabase_url and supabase_key),
+                'port': os.environ.get('PORT', '5000')
+            }
+        }
+        
+        print(f"HEALTH CHECK RESPONSE: {health_data}")
+        return jsonify(health_data)
+        
+    except Exception as e:
+        print(f"HEALTH CHECK ERROR: {e}")
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
+@app.route('/api/test', methods=['GET'])
+def test_endpoint():
+    """Simple test endpoint"""
+    print("TEST ENDPOINT CALLED")
+    return jsonify({'message': 'Test endpoint working', 'status': 'ok'})
 
 @app.route('/api/auth/gmail', methods=['GET'])
 def get_backend_base_url():
