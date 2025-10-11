@@ -37,22 +37,9 @@ def log_request_info():
     logger.info(f"Incoming request: {request.method} {request.url}")
 
 # Import after CORS setup
-# Delay heavy imports until they're needed inside endpoints to avoid
-# performing network or interactive work during module import.
+from scraper.scheduler import run_once
 from scraper.config import settings
-_delayed_imports = {}
-
-def _ensure_delayed_imports():
-    """Import modules that may perform network I/O or interactive actions.
-    This keeps the top-level import fast so gunicorn workers start quickly.
-    """
-    global _delayed_imports
-    if not _delayed_imports:
-        # Import inside a function to avoid heavy startup work during import time
-        from scraper.scheduler import run_once as _run_once
-        from database.supabase_client import supabase_manager as _supabase_manager
-        _delayed_imports['run_once'] = _run_once
-        _delayed_imports['supabase_manager'] = _supabase_manager
+from database.supabase_client import supabase_manager
 
 def get_user_from_request():
     """Extract user email from request headers or JSON"""
@@ -68,8 +55,7 @@ def get_user_from_request():
         return None, jsonify({'error': 'User email required'}), 400
         
     try:
-        _ensure_delayed_imports()
-        user = _delayed_imports['supabase_manager'].get_or_create_user(user_email)
+        user = supabase_manager.get_or_create_user(user_email)
         logger.info(f"Found/created user: {user['email']}")
         return user, None, None
     except Exception as e:
@@ -324,8 +310,7 @@ def gmail_callback():
         logger.info(f"Gmail OAuth successful for user: {user_email}")
         
         # Create or get user in Supabase
-        _ensure_delayed_imports()
-        user = _delayed_imports['supabase_manager'].get_or_create_user(user_email)
+        user = supabase_manager.get_or_create_user(user_email)
         
         # Save Gmail tokens to Supabase
         token_data = {
@@ -338,8 +323,7 @@ def gmail_callback():
             'expiry': credentials.expiry.isoformat() if credentials.expiry else None
         }
         
-        _ensure_delayed_imports()
-        _delayed_imports['supabase_manager'].save_user_tokens(user['id'], token_data)
+        supabase_manager.save_user_tokens(user['id'], token_data)
         logger.info(f"Saved Gmail tokens for user: {user_email}")
         
         # Get frontend URL dynamically based on referrer or request origin
@@ -359,13 +343,8 @@ def gmail_callback():
         <html>
         <body>
         <script>
-        // Try to communicate with parent window using multiple target origins
-        const targetOrigins = [
-            'http://localhost:3000',
-            'http://127.0.0.1:3000', 
-            'http://192.168.100.250:3000'
-        ];
-        
+        // Try to communicate with parent window. Prefer the actual frontend origin
+        const frontendOrigin = new URL(document.referrer || window.location.href).origin || 'http://localhost:3000';
         const message = {{
             type: 'GMAIL_AUTH_SUCCESS',
             user: {{
@@ -373,15 +352,21 @@ def gmail_callback():
                 email: '{user_email}'
             }}
         }};
-        
-        targetOrigins.forEach(origin => {{
-            try {{
-                window.opener.postMessage(message, origin);
-            }} catch (e) {{
-                console.log('Failed to post to:', origin, e);
-            }}
-        }});
-        
+
+        try {{
+            // Primary: post to the precise frontend origin
+            window.opener.postMessage(message, frontendOrigin);
+        }} catch (e) {{
+            console.warn('Primary postMessage failed:', e);
+        }}
+
+        try {{
+            // Fallback: broad postMessage - some browsers block wildcard origins but it's useful as last resort
+            window.opener.postMessage(message, '*');
+        }} catch (e) {{
+            console.warn('Fallback postMessage failed:', e);
+        }}
+
         setTimeout(() => window.close(), 1000);
         </script>
         <p>Authentication successful! This window will close automatically.</p>
@@ -446,8 +431,7 @@ def login():
         if not email:
             return jsonify({'error': 'Email required'}), 400
             
-        _ensure_delayed_imports()
-        user = _delayed_imports['supabase_manager'].get_or_create_user(email)
+        user = supabase_manager.get_or_create_user(email)
         
         return jsonify({
             'success': True,
@@ -470,8 +454,7 @@ def get_config():
         if error_response:
             return error_response, status_code
             
-        _ensure_delayed_imports()
-        user_settings = _delayed_imports['supabase_manager'].get_user_settings(user['id'])
+        user_settings = supabase_manager.get_user_settings(user['id'])
         
         # Return user-specific configuration
         safe_config = {
@@ -507,13 +490,11 @@ def update_semesters():
             return jsonify({'error': 'Semesters must be a list'}), 400
 
         # Get current user settings
-        _ensure_delayed_imports()
-        current_settings = _delayed_imports['supabase_manager'].get_user_settings(user['id'])
+        current_settings = supabase_manager.get_user_settings(user['id'])
         current_settings['allowed_semesters'] = new_semesters
         
         # Save updated settings to Supabase
-        _ensure_delayed_imports()
-        success = _delayed_imports['supabase_manager'].save_user_settings(user['id'], current_settings)
+        success = supabase_manager.save_user_settings(user['id'], current_settings)
         
         if success:
             logger.info(f"Updated allowed semesters for user {user['email']}: {new_semesters}")
@@ -543,11 +524,10 @@ def scrape_now():
         logger.info(f"Starting manual scrape via API for user {user['email']}")
         
         # Get user settings for the scrape
-        _ensure_delayed_imports()
-        user_settings = _delayed_imports['supabase_manager'].get_user_settings(user['id'])
+        user_settings = supabase_manager.get_user_settings(user['id'])
         
         # Run the scraper with user-specific settings
-        result = _delayed_imports['run_once'](
+        result = run_once(
             user_email=user['email'], 
             show_table=False, 
             user_id=user['id'], 
@@ -589,8 +569,7 @@ def get_latest_timetable():
             
         logger.info(f"Getting timetable for user: {user['email']}")
         # Get latest timetable cache from Supabase
-        _ensure_delayed_imports()
-        cache_data = _delayed_imports['supabase_manager'].get_latest_timetable_cache(user['id'])
+        cache_data = supabase_manager.get_latest_timetable_cache(user['id'])
         
         if not cache_data:
             logger.info("No cached timetable data found")
@@ -625,8 +604,7 @@ def get_status():
         user_id = user.get('id') if user else None
         
         # Get latest timestamp from Supabase (user-specific or global)
-        _ensure_delayed_imports()
-        latest_timestamp = _delayed_imports['supabase_manager'].get_latest_timetable_timestamp(user_id)
+        latest_timestamp = supabase_manager.get_latest_timetable_timestamp(user_id)
         
         # Also check local cache file as fallback
         cache_file = os.path.join(os.path.dirname(__file__), '..', 'data', 'cache', 'last_checked.json')
