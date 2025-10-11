@@ -26,7 +26,8 @@ USER app
 EXPOSE 5000
 
 # Health check that uses the runtime PORT (fallback to 5000) and target /api/health
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+# Give the app more time to start before failing health checks and be more tolerant of transient failures.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=5 \
     CMD /bin/sh -c 'curl -f http://localhost:${PORT:-5000}/api/health || exit 1'
 
 # Use gunicorn to serve the minimal WSGI app (simple_app) and log access/errors to stdout

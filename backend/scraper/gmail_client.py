@@ -40,6 +40,15 @@ def get_credentials(token_path: str = "token.json", client_secret_path: str = "c
                     }
                 }
                 flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
+
+                # Don't attempt an interactive browser-based flow in containerized or CI environments.
+                if os.environ.get('CONTAINERIZED') == '1' or os.environ.get('CI'):
+                    raise RuntimeError(
+                        "Interactive OAuth flow isn't available in container/CI environments. "
+                        "Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET and perform the OAuth flow locally to produce a token.json, "
+                        "or implement a non-interactive device/authorization flow."
+                    )
+
                 creds = flow.run_local_server(port=0)
             else:
                 if not os.path.exists(client_secret_path):
