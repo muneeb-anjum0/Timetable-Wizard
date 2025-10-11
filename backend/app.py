@@ -63,11 +63,13 @@ def get_user_from_request():
 def health_check():
     """Health check endpoint"""
     try:
+        # Basic health check without database dependency
         return jsonify({
             'status': 'healthy',
             'timestamp': datetime.now().isoformat(),
             'config_loaded': True,
-            'supabase_connected': True
+            'supabase_url': bool(os.getenv('SUPABASE_URL')),
+            'supabase_key': bool(os.getenv('SUPABASE_SERVICE_KEY'))
         })
     except Exception as e:
         return jsonify({
