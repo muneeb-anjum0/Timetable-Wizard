@@ -2,6 +2,6 @@
 builder = "dockerfile"
 
 [deploy]
-startCommand = "./start.sh"
+startCommand = "gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 30 app:app"
 healthcheckPath = "/api/health"
 restartPolicyType = "ON_FAILURE"
