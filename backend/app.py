@@ -67,6 +67,22 @@ def health_check():
     return jsonify({'status': 'healthy', 'timestamp': '2025-01-01T00:00:00'})
 
 @app.route('/api/auth/gmail', methods=['GET'])
+def get_backend_base_url():
+    """Get the backend base URL dynamically based on environment"""
+    # Check if we're in production (Railway)
+    railway_domain = os.environ.get('RAILWAY_STATIC_URL') or os.environ.get('RAILWAY_PROJECT_DOMAIN')
+    if railway_domain:
+        return f"https://{railway_domain}"
+    
+    # Check for custom domain environment variable
+    custom_domain = os.environ.get('BACKEND_DOMAIN')
+    if custom_domain:
+        return f"https://{custom_domain}"
+    
+    # Default to localhost for development
+    port = os.environ.get('PORT', '5000')
+    return f"http://localhost:{port}"
+
 def gmail_auth():
     """Initiate Gmail OAuth flow"""
     try:
@@ -93,8 +109,9 @@ def gmail_auth():
                    'openid']
         )
         
-        # Set the redirect URI - always use localhost for OAuth (Google OAuth config)
-        flow.redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
+        # Set the redirect URI dynamically based on environment
+        backend_url = get_backend_base_url()
+        flow.redirect_uri = f"{backend_url}/api/auth/gmail/callback"
         
         # Generate authorization URL
         authorization_url, state = flow.authorization_url(
@@ -136,8 +153,9 @@ def gmail_callback():
                    'https://www.googleapis.com/auth/userinfo.profile',
                    'openid']
         )
-        # Set redirect URI - always use localhost for OAuth (Google OAuth config)
-        flow.redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
+        # Set redirect URI dynamically based on environment
+        backend_url = get_backend_base_url()
+        flow.redirect_uri = f"{backend_url}/api/auth/gmail/callback"
         
         # Get the authorization response
         authorization_response = request.url
@@ -167,7 +185,8 @@ def gmail_callback():
                         client_secrets_file,
                         scopes=actual_scopes
                     )
-                    flow.redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
+                    backend_url = get_backend_base_url()
+                    flow.redirect_uri = f"{backend_url}/api/auth/gmail/callback"
                 
                 flow.fetch_token(authorization_response=authorization_response)
             else:
