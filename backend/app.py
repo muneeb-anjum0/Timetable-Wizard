@@ -59,12 +59,12 @@ def get_user_from_request():
 @app.route('/', methods=['GET'])
 def root():
     """Root endpoint"""
-    return {'message': 'Timetable Wizard API', 'status': 'running'}
+    return jsonify({'message': 'Timetable Wizard API', 'status': 'running'})
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    return {'status': 'healthy', 'timestamp': '2025-01-01T00:00:00'}
+    return jsonify({'status': 'healthy', 'timestamp': '2025-01-01T00:00:00'})
 
 @app.route('/api/auth/gmail', methods=['GET'])
 def gmail_auth():
