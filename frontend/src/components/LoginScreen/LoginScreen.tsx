@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Mail, LogIn, AlertCircle, Calendar } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -34,27 +35,59 @@ const LoginScreen: React.FC = () => {
   };
 
   return (
-  <div className={`min-h-screen bg-white flex items-center justify-center p-4 ${isExiting ? 'animate-login-exit' : 'animate-fall-down'}`}>
-      <div className="max-w-md w-full">
-  <div className={`bg-white rounded-3xl shadow-2xl p-10 border border-gray-100 ${isExiting ? '' : 'animate-fall-down animation-delay-100'}`}>
+    <motion.div
+      initial={{ opacity: 0, y: -40 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3 }}
+      className={`min-h-screen bg-white flex items-center justify-center p-4`}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: -40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.05 }}
+        className="max-w-md w-full"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: -40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.1 }}
+          className="bg-white rounded-3xl shadow-2xl p-10 border border-gray-100"
+        >
           {/* Header */}
           <div className="text-center mb-10">
-            <div className="w-24 h-24 flex items-center justify-center mx-auto mb-4 rounded-full bg-white shadow-sm animate-fall-down animation-delay-150">
+            <motion.div
+              initial={{ opacity: 0, y: -40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.15 }}
+              className="w-24 h-24 flex items-center justify-center mx-auto mb-4 rounded-full bg-white shadow-sm"
+            >
               <img src="/logoo.svg" alt="Logo" className="w-16 h-16 object-contain p-2" />
-            </div>
-            <h1 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight animate-fall-down animation-delay-200">
+            </motion.div>
+            <motion.h1
+              initial={{ opacity: 0, y: -40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.2 }}
+              className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight"
+            >
               Timetable Wizard
-            </h1>
-            <p className="text-base text-gray-600 font-medium animate-fall-down animation-delay-300">
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: -40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.25 }}
+              className="text-base text-gray-600 font-medium"
+            >
               Sign in to access your university timetable
-            </p>
+            </motion.p>
           </div>
-
           {/* Gmail OAuth Button */}
-          <button
+          <motion.button
+            initial={{ opacity: 0, y: -40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.3 }}
             onClick={handleGmailLogin}
             disabled={isLoading}
-            className="w-full bg-white hover:bg-gray-50 disabled:bg-gray-200 disabled:cursor-not-allowed text-gray-900 font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg border border-gray-300 hover:scale-105 hover:shadow-xl animate-fall-down animation-delay-400"
+            className="w-full bg-white hover:bg-gray-50 disabled:bg-gray-200 disabled:cursor-not-allowed text-gray-900 font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg border border-gray-300 hover:scale-105 hover:shadow-xl"
           >
             {isLoading ? (
               <>
@@ -67,17 +100,25 @@ const LoginScreen: React.FC = () => {
                 <span className="text-gray-900">Sign in with Gmail</span>
               </>
             )}
-          </button>
-
+          </motion.button>
           {error && (
-            <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg mt-6 border border-red-200 animate-fade-in">
+            <motion.div
+              initial={{ opacity: 0, y: -40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.35 }}
+              className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg mt-6 border border-red-200"
+            >
               <AlertCircle className="w-5 h-5" />
               <span className="text-sm">{error}</span>
-            </div>
+            </motion.div>
           )}
-
           {/* Footer */}
-          <div className="mt-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: -40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.4 }}
+            className="mt-10 text-center"
+          >
             <p className="text-sm text-gray-500 mb-2">
               Sign in with Gmail to view your timetable.
             </p>
@@ -89,11 +130,11 @@ const LoginScreen: React.FC = () => {
             >
               Need help? Contact Support
             </a>
-          </div>
-        </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
-};
+}
 
 export default LoginScreen;

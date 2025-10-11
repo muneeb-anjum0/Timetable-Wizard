@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+// Removed framer-motion
 import { Plus, X, Save, Settings } from 'lucide-react';
 
 interface SemesterManagerProps {
@@ -47,19 +48,19 @@ const SemesterManager: React.FC<SemesterManagerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 border border-gray-200 animate-fall-down">
-        <div className="px-6 py-4 border-b border-gray-100 animate-fall-down animation-delay-100">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-100">
           <div className="flex items-center justify-between">
-            <div className="flex items-center animate-fall-down animation-delay-150">
-              <img src="/setting.svg" alt="Setting" className="h-6 w-6 text-blue-600 mr-2 animate-fall-down animation-delay-200" />
+            <div className="flex items-center">
+              <img src="/setting.svg" alt="Setting" className="h-6 w-6 text-blue-600 mr-2" />
               <h3 className="text-lg font-semibold text-gray-900 tracking-tight">
                 Manage Allowed Semesters
               </h3>
             </div>
             <button
               onClick={onClose}
-              className="rounded-full p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-300 hover:scale-110 animate-fall-down animation-delay-250"
+              className="rounded-full p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-300 hover:scale-110"
               title="Close"
             >
               <X className="h-5 w-5" />
@@ -67,12 +68,12 @@ const SemesterManager: React.FC<SemesterManagerProps> = ({
           </div>
         </div>
 
-        <div className="px-6 py-4 animate-fall-down animation-delay-300">
+        <div className="px-6 py-4">
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2 animate-fall-down animation-delay-350">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Add New Semester
             </label>
-            <div className="flex animate-fall-down animation-delay-400">
+            <div className="flex">
               <input
                 type="text"
                 value={newSemester}
@@ -90,16 +91,16 @@ const SemesterManager: React.FC<SemesterManagerProps> = ({
                 <img src="/add.svg" alt="Add" className="h-4 w-4" />
               </button>
             </div>
-            <p className="mt-1 text-xs text-gray-500 animate-fall-down animation-delay-450">
+            <p className="mt-1 text-xs text-gray-500">
               Examples: "BS (SE) - 5C", "MS (CS) - 1A", "7A", "3B"
             </p>
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2 animate-fall-down animation-delay-500">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Current Semesters ({semesters.length})
             </label>
-            <div className="max-h-48 overflow-y-auto border border-gray-100 rounded-xl bg-gray-50 animate-fall-down animation-delay-550">
+            <div className="max-h-48 overflow-y-auto border border-gray-100 rounded-xl bg-gray-50">
               {semesters.length === 0 ? (
                 <div className="p-4 text-center text-gray-500 text-sm">
                   No semesters configured. Add some semesters above.
@@ -107,7 +108,7 @@ const SemesterManager: React.FC<SemesterManagerProps> = ({
               ) : (
                 <div className="divide-y divide-gray-200">
                   {semesters.map((semester, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 hover:bg-blue-50 rounded-xl transition-all duration-300 hover:shadow-sm animate-fade-in" style={{animationDelay: `${index * 50}ms`}}>
+                    <div key={index} className="flex items-center justify-between p-3 hover:bg-blue-50 rounded-xl transition-all duration-300 hover:shadow-sm">
                       <span className="text-sm text-gray-900">{semester}</span>
                       <button
                         onClick={() => removeSemester(index)}
@@ -124,16 +125,16 @@ const SemesterManager: React.FC<SemesterManagerProps> = ({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2 animate-fall-down animation-delay-600">
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="inline-flex items-center px-4 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-full shadow text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition-all duration-300 hover:scale-105 animate-fall-down animation-delay-650"
+            className="inline-flex items-center px-4 py-2 border-2 border-gray-400 text-xs sm:text-sm font-medium rounded-full shadow text-gray-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition-all duration-300 hover:scale-105"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="inline-flex items-center px-4 py-2 border-2 border-blue-400 text-xs sm:text-sm font-medium rounded-full shadow text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition-all duration-300 hover:scale-105 animate-fall-down animation-delay-700"
+            className="inline-flex items-center px-4 py-2 border-2 border-blue-400 text-xs sm:text-sm font-medium rounded-full shadow text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition-all duration-300 hover:scale-105"
           >
             <img src="/add.svg" alt="Save" className="h-4 w-4 mr-2" />
             Save Changes
@@ -142,6 +143,6 @@ const SemesterManager: React.FC<SemesterManagerProps> = ({
       </div>
     </div>
   );
-};
+}
 
 export default SemesterManager;

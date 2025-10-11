@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { TimetableItem } from '../../types/api';
 import DataQualityIndicator from '../DataQualityIndicator';
 import { 
@@ -195,48 +196,65 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
   }, [items]);
 
   if (!items || items.length === 0) {
-    return (
-      <div className="bg-white shadow-lg rounded-lg p-8 text-center animate-fade-in">
-        <svg className="mx-auto h-16 w-16 text-gray-400 mb-4 animate-gentle-scale" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No timetable data available</h3>
-        <p className="text-gray-500 text-sm">
-          Configure your semesters and refresh the data to see your schedule.
-        </p>
-      </div>
-    );
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: -40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3 }}
+          className="bg-white shadow-lg rounded-lg p-8 text-center"
+        >
+          <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No timetable data available</h3>
+          <p className="text-gray-500 text-sm">
+            Configure your semesters and refresh the data to see your schedule.
+          </p>
+        </motion.div>
+      );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow border border-gray-100 animate-fall-down animation-delay-450">
+    <motion.div
+      initial={{ opacity: 0, y: -40 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3 }}
+      className="bg-white rounded-lg shadow border border-gray-100"
+    >
       {/* Mobile Card View (hidden on desktop) */}
       <div className="block md:hidden">
-  <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-gray-100">
           {sortedSemesters.map((semester, semesterIndex) => (
-            <div key={semester} className="bg-white animate-fall-down" style={{animationDelay: `${450 + (semesterIndex * 50)}ms`}}>
+            <motion.div
+              key={semester}
+              initial={{ opacity: 0, y: -40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.05 * semesterIndex }}
+              className="bg-white"
+            >
               {/* Mobile Semester Header */}
               <div className="bg-blue-50 px-4 py-3 border-l-4 border-blue-400 hover:bg-blue-100 transition-all duration-300 hover:shadow-sm">
                 <div className="flex items-center gap-2">
-                  <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-2 animate-soft-bounce"></span>
+                  <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-2"></span>
                   <h3 className="text-sm font-semibold text-blue-800">{semester}</h3>
                   <span className="text-xs text-blue-600">({grouped[semester].length} classes)</span>
                 </div>
               </div>
-              
               {/* Mobile Class Cards */}
               <div className="divide-y divide-gray-100">
                 {grouped[semester].map((item, itemIndex) => (
-                  <div key={`${semester}-${itemIndex}`} className="p-4 rounded-md border border-gray-50 mb-2 bg-white hover:bg-blue-50 transition-all duration-300 hover:shadow-md hover:scale-105 animate-fall-down" style={{animationDelay: `${(semesterIndex * 50) + (itemIndex * 25)}ms`}}>
+                  <motion.div
+                    key={`${semester}-${itemIndex}`}
+                    initial={{ opacity: 0, y: -40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.05 * itemIndex }}
+                    className="p-4 rounded-md border border-gray-50 mb-2 bg-white hover:bg-blue-50 transition-all duration-300 hover:shadow-md hover:scale-105"
+                  >
                     <div className="space-y-2">
                       <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium text-gray-900 truncate">
-                            {item.course || '-'}
-                          </h4>
-                          <p className="text-xs text-gray-600 mt-1 break-words">
-                            {getDisplayCourseTitle(item)}
-                          </p>
+                          <h4 className="text-sm font-medium text-gray-900 truncate">{item.course || '-'}</h4>
+                          <p className="text-xs text-gray-600 mt-1 break-words">{getDisplayCourseTitle(item)}</p>
                         </div>
                         <div className="ml-2 flex-shrink-0">
                           {(() => {
@@ -253,73 +271,72 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
                           })()}
                         </div>
                       </div>
-                      
                       <div className="flex flex-wrap gap-2 text-xs text-gray-500">
                         <div className="flex items-center">
-                          <span className="mr-1">👨‍🏫</span>
+                          <span className="mr-1">468393</span>
                           <span className="truncate">{getDisplayFaculty(item)}</span>
                         </div>
                         <div className="flex items-center">
-                          <span className="mr-1">⏰</span>
+                          <span className="mr-1">3f0</span>
                           <span>{getDisplayTime(item)}</span>
                         </div>
                         <div className="flex items-center">
-                          <span className="mr-1">🏫</span>
+                          <span className="mr-1">393</span>
                           <span className="truncate">{getDisplayCampus(item)}</span>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
 
       {/* Desktop Table View (hidden on mobile) */}
-      <div className="hidden md:block overflow-x-auto">
-  <table className="min-w-full divide-y divide-gray-100">
+  <div className="hidden md:block overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <style>{`
+          .hide-scrollbar::-webkit-scrollbar { display: none; }
+        `}</style>
+        <table className="min-w-full divide-y divide-gray-100 hide-scrollbar">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Course
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-xs">
-                Course Title
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Faculty
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Room
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Time
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Semester
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Campus
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-xs">Course Title</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Faculty</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semester</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Campus</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedSemesters.map((semester, semesterIndex) => (
               <React.Fragment key={semester}>
                 {/* Desktop Semester Header Row */}
-                <tr className="bg-blue-50 border-t border-blue-200">
+                <motion.tr
+                  initial={{ opacity: 0, y: -40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.05 * semesterIndex }}
+                  className="bg-blue-50 border-t border-blue-200"
+                >
                   <td colSpan={7} className="px-6 py-3 text-base font-semibold text-blue-800 bg-blue-50 rounded-t-md hover:bg-blue-100 transition-colors duration-200">
                     <div className="flex items-center gap-2">
                       <span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>
                       {semester} <span className="text-xs text-blue-600">({grouped[semester].length} classes)</span>
                     </div>
                   </td>
-                </tr>
+                </motion.tr>
                 {/* Desktop Classes for this semester */}
                 {grouped[semester].map((item, itemIndex) => (
-                  <tr key={`${semester}-${itemIndex}`} className="hover:bg-blue-50 transition-colors duration-200">
+                  <motion.tr
+                    key={`${semester}-${itemIndex}`}
+                    initial={{ opacity: 0, y: -40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.05 * itemIndex }}
+                    className="hover:bg-blue-50 transition-colors duration-200"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       <span className="font-semibold text-gray-900">{item.course || '-'}</span>
                     </td>
@@ -352,14 +369,14 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <span className="text-gray-500">{getDisplayCampus(item)}</span>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </React.Fragment>
             ))}
           </tbody>
         </table>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
