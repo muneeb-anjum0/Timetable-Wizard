@@ -63,7 +63,6 @@ def get_user_from_request():
         return None, jsonify({'error': 'User management error'}), 500
 
 @app.route('/', methods=['GET'])
-@app.route('/', methods=['GET'])
 def root():
     """Simple root endpoint for testing"""
     try:
