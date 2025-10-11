@@ -59,6 +59,11 @@ def get_user_from_request():
         logger.error(f"Error getting user: {e}")
         return None, jsonify({'error': 'User management error'}), 500
 
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint"""
+    return {'message': 'Timetable Wizard API', 'status': 'running'}
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""

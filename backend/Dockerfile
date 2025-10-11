@@ -40,7 +40,7 @@ echo "PORT: $PORT" \n\
 echo "Testing Python import..."\n\
 python -c "import sys; print(f\"Python version: {sys.version}\"); import app; print(\"App imported successfully\")" || { echo "Failed to import app"; exit 1; }\n\
 echo "Starting gunicorn..."\n\
-exec gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 1 --threads 1 --log-level info app:app' > /app/start.sh && chmod +x /app/start.sh
+exec gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 1 --threads 2 --timeout 30 --keep-alive 2 --log-level info --access-logfile - --error-logfile - app:app' > /app/start.sh && chmod +x /app/start.sh
 
 # Start the application
 CMD ["/app/start.sh"]
