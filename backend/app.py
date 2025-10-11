@@ -21,17 +21,14 @@ CORS(app, origins=["*"], supports_credentials=True,
 
 # Enhanced logging setup
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()
-    ]
+    level=logging.WARNING,  # Changed from INFO to WARNING to reduce noise
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
 # Reduce noise from external libraries during startup
-logging.getLogger('scraper.config').setLevel(logging.WARNING)
-logging.getLogger('database.supabase_client').setLevel(logging.WARNING)
+logging.getLogger('scraper.config').setLevel(logging.ERROR)
+logging.getLogger('database.supabase_client').setLevel(logging.ERROR)
 
 # Import after CORS setup
 from scraper.scheduler import run_once
