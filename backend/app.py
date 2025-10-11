@@ -61,6 +61,11 @@ def root():
     """Root endpoint"""
     return jsonify({'message': 'Timetable Wizard API', 'status': 'running'})
 
+@app.route('/', methods=['GET'])
+def root():
+    """Simple root endpoint for testing"""
+    return jsonify({'status': 'ok', 'message': 'Timetable Wizard API is running'})
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
