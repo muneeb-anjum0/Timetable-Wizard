@@ -2,8 +2,6 @@
 Flask backend for TimeTable Scraper with Multi-User Support
 Provides RESTful API endpoints for the React frontend
 """
-print("Starting app.py import...")
-
 import os
 import sys
 import json
@@ -12,20 +10,14 @@ from datetime import datetime
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-print("Basic imports completed...")
-
 # Backend imports are now local since all backend code is in this directory
 
 app = Flask(__name__)
-print("Flask app created...")
-
 # CORS configuration to allow network access
 # More permissive CORS for development
 CORS(app, origins=["*"], supports_credentials=True, 
      allow_headers=['Content-Type', 'Authorization', 'X-User-Email'],
      methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
-
-print("CORS configured...")
 
 # Enhanced logging setup
 logging.basicConfig(
@@ -70,21 +62,7 @@ def get_user_from_request():
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    try:
-        # Basic health check without database dependency
-        return jsonify({
-            'status': 'healthy',
-            'timestamp': datetime.now().isoformat(),
-            'config_loaded': True,
-            'supabase_url': bool(os.getenv('SUPABASE_URL')),
-            'supabase_key': bool(os.getenv('SUPABASE_SERVICE_KEY'))
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'unhealthy',
-            'error': str(e),
-            'timestamp': datetime.now().isoformat()
-        }), 500
+    return {'status': 'healthy', 'timestamp': '2025-01-01T00:00:00'}
 
 @app.route('/api/auth/gmail', methods=['GET'])
 def gmail_auth():
