@@ -21,14 +21,20 @@ CORS(app, origins=["*"], supports_credentials=True,
 
 # Enhanced logging setup
 logging.basicConfig(
-    level=logging.WARNING,  # Changed from INFO to WARNING to reduce noise
+    level=logging.INFO,  # Changed from WARNING to INFO for more visibility
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
 # Reduce noise from external libraries during startup
-logging.getLogger('scraper.config').setLevel(logging.ERROR)
-logging.getLogger('database.supabase_client').setLevel(logging.ERROR)
+logging.getLogger('scraper.config').setLevel(logging.WARNING)
+logging.getLogger('database.supabase_client').setLevel(logging.WARNING)
+
+@app.before_request
+def log_request_info():
+    """Log all incoming requests"""
+    print(f"REQUEST: {request.method} {request.url}")
+    logger.info(f"Incoming request: {request.method} {request.url}")
 
 # Import after CORS setup
 from scraper.scheduler import run_once
@@ -60,8 +66,18 @@ def get_user_from_request():
 @app.route('/', methods=['GET'])
 def root():
     """Simple root endpoint for testing"""
-    print("ROOT ENDPOINT CALLED")  # Debug print
-    return jsonify({'status': 'ok', 'message': 'Timetable Wizard API is running'})
+    try:
+        print("ROOT ENDPOINT CALLED - Flask is working!")
+        logger.info("Root endpoint accessed successfully")
+        return jsonify({
+            'status': 'ok',
+            'message': 'Timetable Wizard API is running',
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        print(f"ERROR in root endpoint: {e}")
+        logger.error(f"Error in root endpoint: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
