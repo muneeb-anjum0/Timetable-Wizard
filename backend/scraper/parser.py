@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from typing import List, Dict, Optional
 import re
 from .config import settings
-from .semester_matcher import flexible_semester_match, normalize_semester, tokenize_semester
+from .semester_matcher import flexible_semester_match, normalize_semester, tokenize_semester, find_best_semester_match, find_all_matching_semesters
 
 WS = re.compile(r"\s+")
 NON_ALNUM = re.compile(r"[^A-Za-z0-9]+")
@@ -126,15 +126,34 @@ def parse_schedule_text(text: str, semesters: List[str]) -> List[Dict]:
         semester_found = ""
         
         if want:
-            # Use flexible semester matching for better accuracy
-            if flexible_semester_match(line, line, semesters):
-                keep = True
-                match_reason = "flexible semester match found in line"
-                # Find which semester matched
-                for orig_sem in semesters:
-                    if flexible_semester_match(line, line, [orig_sem]):
-                        semester_found = normalize_semester(orig_sem)
-                        break
+            # Use flexible semester matching for better accuracy, including slash-separated semesters
+            found_semesters = find_all_matching_semesters(line, semesters)
+            if found_semesters:
+                # Additional validation: ensure line has some course data, not just semester
+                has_course_info = (course_pattern.search(line) or 
+                                 time_pattern.search(line) or 
+                                 re.search(r'[A-Z][a-z]+\s+[A-Z][a-z]+', line))  # Faculty name pattern
+                if has_course_info:
+                    keep = True
+                    match_reason = f"flexible semester match found in line with course data ({len(found_semesters)} semesters)"
+                    semester_found = found_semesters[0]  # Use first semester for main processing
+                else:
+                    # Check if course data is on the next line (split-row case)
+                    if i + 1 < len(schedule_lines):
+                        next_line_num, next_line = schedule_lines[i + 1]
+                        next_has_course = (course_pattern.search(next_line) or 
+                                         time_pattern.search(next_line) or 
+                                         re.search(r'[A-Z][a-z]+\s+[A-Z][a-z]+', next_line))
+                        if next_has_course and not find_best_semester_match(next_line, semesters):
+                            # Next line has course data but no semester - merge them
+                            keep = True
+                            match_reason = "flexible semester match with course data on next line"
+                            semester_found = found_semesters[0]
+                            if settings.debug_parsing:
+                                logger.debug(f"Line {line_num}: Merging with next line {next_line_num} for complete entry")
+                        else:
+                            if settings.debug_parsing:
+                                logger.debug(f"Line {line_num}: Semester matches '{found_semesters}' but no course data: '{line}'")
             
             # Fallback to original tokenized matching if flexible matching fails
             if not keep:
@@ -142,10 +161,17 @@ def parse_schedule_text(text: str, semesters: List[str]) -> List[Dict]:
                     # Convert back to find the original semester string in the line
                     for orig_sem in semesters:
                         if _tok(orig_sem) == w and orig_sem.upper() in line_upper:
-                            keep = True
-                            match_reason = f"token match: '{orig_sem}' found in line"
-                            semester_found = orig_sem
-                            break
+                            # Also validate that fallback matches have course data
+                            has_course_info = (course_pattern.search(line) or 
+                                             time_pattern.search(line) or 
+                                             re.search(r'[A-Z][a-z]+\s+[A-Z][a-z]+', line))
+                            if has_course_info:
+                                keep = True
+                                match_reason = f"token match: '{orig_sem}' found in line"
+                                semester_found = orig_sem
+                                break
+                            elif settings.debug_parsing:
+                                logger.debug(f"Line {line_num}: Token match '{orig_sem}' but no course data: '{line}'")
                     if keep:
                         break
         else:
@@ -162,6 +188,19 @@ def parse_schedule_text(text: str, semesters: List[str]) -> List[Dict]:
             combined_line = line
             course_match = course_pattern.search(line)
             
+            # Special case: if this line has semester but no course, and match reason indicates course on next line
+            if "course data on next line" in match_reason and i + 1 < len(schedule_lines):
+                next_line_num, next_line = schedule_lines[i + 1]
+                # Only combine if the next line doesn't start with a serial number (indicating a new entry)
+                if not re.match(r'^\d+\s+', next_line.strip()):
+                    combined_line = line + " " + next_line.strip()
+                    course_match = course_pattern.search(combined_line)
+                    # Skip the next line since we're consuming it
+                    i += 1
+                else:
+                    # Next line starts a new entry, don't combine
+                    combined_line = line
+            
             if settings.debug_parsing and line_num == 279:
                 logger.debug(f"Line 279 raw content: '{line}'")
                 logger.debug(f"Line 279 length: {len(line)}")
@@ -172,8 +211,9 @@ def parse_schedule_text(text: str, semesters: List[str]) -> List[Dict]:
                 has_room = room_pattern.search(line)
                 has_campus = re.search(r'SZABIST', line, re.IGNORECASE)
                 
-                # Look ahead for continuation lines if missing important info
-                if not has_time or not has_campus:
+                # Look ahead for continuation lines if missing important info or have incomplete time
+                incomplete_time = re.search(r'\d{1,2}:\d{2}\s*(?:AM|PM)\s*[-–—→]\s*$', combined_line, re.IGNORECASE)
+                if not has_time or not has_campus or incomplete_time:
                     j = i + 1
                     while j < len(schedule_lines) and j < i + 5:  # Look ahead max 5 lines
                         next_line_num, next_line = schedule_lines[j]
@@ -181,18 +221,29 @@ def parse_schedule_text(text: str, semesters: List[str]) -> List[Dict]:
                         if settings.debug_parsing:
                             logger.debug(f"  Checking continuation line {next_line_num}: '{next_line}'")
                         
-                        # Stop if next line clearly starts a new entry (serial number at start + course pattern)
+                        # Stop if next line clearly starts a new entry 
                         if (re.match(r'^\d+\s+', next_line) and 
                             (course_pattern.search(next_line) or 
                              re.search(r'\b(BS|MS|PhD|MBA|BBA)\s*\([^)]+\)', next_line))):
                             if settings.debug_parsing:
                                 logger.debug(f"  Breaking: next line starts new entry")
                             break
+                        
+                        # Also stop if next line has a course code (indicates separate course)
+                        if course_pattern.search(next_line):
+                            if settings.debug_parsing:
+                                logger.debug(f"  Breaking: next line has course code")
+                            break
                             
                         # If next line has time/room/campus info OR looks like a continuation
+                        # Special check for time completion (e.g., "01:30 PM" to complete "12:00 PM –")
+                        completes_time = (incomplete_time and 
+                                        re.search(r'\d{1,2}:\d{2}\s*(?:AM|PM)', next_line, re.IGNORECASE))
+                        
                         if (time_pattern.search(next_line) or 
                             room_pattern.search(next_line) or 
                             re.search(r'SZABIST|Campus|HMB|University', next_line, re.IGNORECASE) or
+                            completes_time or
                             # Also check for partial time patterns like "PM" or numbers followed by ":"
                             re.search(r'\b(?:AM|PM)\b|\d{1,2}:\d{2}', next_line)):
                             if settings.debug_parsing:
@@ -247,11 +298,14 @@ def parse_schedule_text(text: str, semesters: List[str]) -> List[Dict]:
             # extracted_room is now handled by _extract_room_szabist above
             extracted_course = course_match.group(1) if course_match else None
             
-            # If time is missing, try to find it from our mapping
-            if not extracted_time and extracted_course:
-                extracted_time = time_mapping.get(extracted_course)
-            if not extracted_time and extracted_room:
-                extracted_time = time_mapping.get(extracted_room)
+
+            # DISABLED: Time mapping fallback is causing incorrect time assignments
+            # The time_mapping can associate rooms with wrong times from other courses
+            # Better to leave time as None/incomplete than to assign wrong time
+            # if not extracted_time and extracted_course:
+            #     extracted_time = time_mapping.get(extracted_course)
+            # if not extracted_time and extracted_room:
+            #     extracted_time = time_mapping.get(extracted_room)
                 
             # If campus is missing, try to find it from our mapping  
             if not extracted_campus and extracted_course:
@@ -275,25 +329,35 @@ def parse_schedule_text(text: str, semesters: List[str]) -> List[Dict]:
             # Check if class is cancelled
             is_cancelled = extracted_room == "Cancelled" if extracted_room else False
             
-            rec = {
-                "sr_no": sr_match.group(1) if sr_match else None,
-                "dept": dept_match.group(1) if dept_match else None,
-                "program": _extract_program(combined_line),
-                "class_section": semester_found or _extract_class_section(combined_line),
-                "course": extracted_course,
-                "course_title": course_title,
-                "faculty": _map_faculty_name(faculty_name),
-                "room": extracted_room,
-                "time": extracted_time,
-                "credits": credit_match.group(1) if credit_match else None,
-                "campus": extracted_campus,
-                "is_cancelled": is_cancelled,
-                "raw_cells": [combined_line],
-                "semester": semester_found or None,
-                "source_line": line_num,
-                "full_text": combined_line,
-            }
-            results.append(rec)
+            # Create records for all matching semesters (handles slash-separated semesters)
+            semesters_to_create = []
+            if want and found_semesters:
+                semesters_to_create = found_semesters
+            elif semester_found:
+                semesters_to_create = [semester_found]
+            else:
+                semesters_to_create = [None]
+            
+            for sem in semesters_to_create:
+                rec = {
+                    "sr_no": sr_match.group(1) if sr_match else None,
+                    "dept": dept_match.group(1) if dept_match else None,
+                    "program": _extract_program(combined_line),
+                    "class_section": sem or _extract_class_section(combined_line),
+                    "course": extracted_course,
+                    "course_title": course_title,
+                    "faculty": _map_faculty_name(faculty_name),
+                    "room": extracted_room,
+                    "time": extracted_time,
+                    "credits": credit_match.group(1) if credit_match else None,
+                    "campus": extracted_campus,
+                    "is_cancelled": is_cancelled,
+                    "raw_cells": [combined_line],
+                    "semester": sem,
+                    "source_line": line_num,
+                    "full_text": combined_line,
+                }
+                results.append(rec)
         else:
             if settings.debug_parsing:
                 logger.debug(f"Line {line_num}: Skipping - no semester match or insufficient schedule data")
@@ -435,7 +499,7 @@ def parse_schedule_html(html: str, semesters: List[str]) -> List[Dict]:
         class_tok = _tok(class_section)
         
         # Debug: Always log what was found in this row
-        logger.info(f"Row {processed_rows}: class_section='{class_section}', tokenized='{class_tok}'")
+        logger.debug(f"Row {processed_rows}: class_section='{class_section}', tokenized='{class_tok}'")
         
         keep = False
         match_reason = ""
@@ -473,7 +537,7 @@ def parse_schedule_html(html: str, semesters: List[str]) -> List[Dict]:
                 logger.debug(f"Row {processed_rows}: Skipping - not enough valid data")
 
         if keep:
-            logger.info(f"Row {processed_rows}: KEEPING - {match_reason}")
+            logger.debug(f"Row {processed_rows}: KEEPING - {match_reason}")
         
         if not keep:
             continue

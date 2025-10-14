@@ -46,24 +46,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     
     // Listen for Gmail OAuth callback
-    // Use a ref to store backend origin so handler closure sees latest value
-    const backendOriginRef = { current: (window as any).__BACKEND_ORIGIN || null } as { current: string | null };
-
     const handleGmailAuthMessage = (event: MessageEvent) => {
-      // Allow messages from known backend origins (dynamic) or localhost dev origins
-      const devPrefixes = [
-        'http://localhost:',
-        'http://127.0.0.1:',
-        'http://192.168.100.250:'
+      // Allow messages from any localhost port (for OAuth callback)
+      const allowedOrigins = [
+        'http://localhost:5000',
+        'http://127.0.0.1:5000',
+        'http://192.168.100.250:5000'
       ];
-
-      const backendOrigin = backendOriginRef.current;
-
-      const allowedFromDev = devPrefixes.some(p => event.origin.startsWith(p));
-      const allowedFromBackend = backendOrigin ? event.origin === backendOrigin : false;
-
-      if (!allowedFromDev && !allowedFromBackend) {
-        console.log('Ignoring message from unauthorized origin:', event.origin, 'backendOrigin=', backendOrigin);
+      
+      // Be more permissive for OAuth callbacks since they come from localhost:5000
+      if (!event.origin.startsWith('http://localhost:') && 
+          !event.origin.startsWith('http://127.0.0.1:') && 
+          !event.origin.startsWith('http://192.168.100.250:')) {
+        console.log('Ignoring message from unauthorized origin:', event.origin);
         return;
       }
       
@@ -101,9 +96,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  // Keep a ref to backend origin so the message handler can validate dynamically
-  const backendOriginRef = React.useRef<string | null>(null);
-
   const loginWithGmail = async (): Promise<boolean> => {
     try {
       setLoading(true);
@@ -111,15 +103,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       const authData = await apiService.getGmailAuthUrl();
       console.log('Got auth URL:', authData.auth_url);
-      try {
-        const parsed = new URL(authData.auth_url);
-        backendOriginRef.current = parsed.origin;
-        // also expose globally for older listeners
-        (window as any).__BACKEND_ORIGIN = parsed.origin;
-        console.log('Set backend origin for postMessage validation:', parsed.origin);
-      } catch (err) {
-        console.warn('Could not parse auth_url origin', err);
-      }
       
       // Open popup window for OAuth
       const popup = window.open(

@@ -186,23 +186,5 @@ class SupabaseManager:
             logger.error(f"Error cleaning up cache: {e}")
             return False
 
-# Global instance - lazy initialization
-_supabase_manager = None
-
-def get_supabase_manager():
-    """Get or create the Supabase manager instance"""
-    global _supabase_manager
-    if _supabase_manager is None:
-        _supabase_manager = SupabaseManager()
-    return _supabase_manager
-
-# For backward compatibility, create a property-like access
-class LazySupabaseManager:
-    def __getattr__(self, name):
-        return getattr(get_supabase_manager(), name)
-    
-    def __call__(self, *args, **kwargs):
-        return get_supabase_manager()(*args, **kwargs)
-
-# Create lazy instance
-supabase_manager = LazySupabaseManager()
+# Global instance
+supabase_manager = SupabaseManager()

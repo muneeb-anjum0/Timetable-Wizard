@@ -13,6 +13,7 @@ def normalize_semester(semester: str) -> str:
     - 'BS (SE) - 4A' -> 'BS(SE)-4A'
     - 'BS( SE)-  4A' -> 'BS(SE)-4A'
     - 'BS(SE) - 4A' -> 'BS(SE)-4A'
+    - 'BS (CS) - 1 D' -> 'BS(CS)-1D'
     """
     if not semester:
         return ""
@@ -21,6 +22,11 @@ def normalize_semester(semester: str) -> str:
     normalized = re.sub(r'\s*\(\s*', '(', semester)
     normalized = re.sub(r'\s*\)\s*', ')', normalized)
     normalized = re.sub(r'\s*-\s*', '-', normalized)
+    
+    # Remove spaces within section identifiers (e.g., "1 D" -> "1D")
+    # This pattern looks for digit(s) followed by space(s) and letter(s) at the end
+    normalized = re.sub(r'(\d+)\s+([A-Z]+)$', r'\1\2', normalized)
+    
     normalized = re.sub(r'\s+', ' ', normalized)  # Multiple spaces to single space
     
     return normalized.strip()
@@ -50,24 +56,32 @@ def generate_semester_variations(semester: str) -> List[str]:
     # First normalize the input
     base = normalize_semester(semester)
     
-    # Extract components using regex
-    match = re.match(r'([A-Z]+)\(([A-Z]+)\)-?(\d+[A-Z])', base.upper())
+    # Extract components using regex - handle spaces in section part
+    match = re.match(r'([A-Z]+)\(([A-Z]+)\)-?(\d+\s*[A-Z])', base.upper())
     if not match:
         # If it doesn't match expected pattern, return normalized version
         return [base]
     
     degree, specialization, section = match.groups()
     
-    # Generate variations
+    # Normalize section by removing any internal spaces (e.g., "1 D" -> "1D")
+    section_normalized = re.sub(r'\s+', '', section)
+    
+    # Generate variations with both spaced and non-spaced section formats
     variations = [
-        f"{degree}({specialization})-{section}",           # BS(SE)-4A
-        f"{degree}({specialization}) - {section}",         # BS(SE) - 4A  
-        f"{degree} ({specialization})-{section}",          # BS (SE)-4A
-        f"{degree} ({specialization}) - {section}",       # BS (SE) - 4A
-        f"{degree}( {specialization})-  {section}",       # BS( SE)-  4A
-        f"{degree}( {specialization}) -  {section}",      # BS( SE) -  4A
-        f"{degree}({specialization})- {section}",         # BS(SE)- 4A
-        f"{degree} ({specialization})- {section}",        # BS (SE)- 4A
+        f"{degree}({specialization})-{section_normalized}",           # BS(SE)-4A
+        f"{degree}({specialization}) - {section_normalized}",         # BS(SE) - 4A  
+        f"{degree} ({specialization})-{section_normalized}",          # BS (SE)-4A
+        f"{degree} ({specialization}) - {section_normalized}",       # BS (SE) - 4A
+        f"{degree}( {specialization})-  {section_normalized}",       # BS( SE)-  4A
+        f"{degree}( {specialization}) -  {section_normalized}",      # BS( SE) -  4A
+        f"{degree}({specialization})- {section_normalized}",         # BS(SE)- 4A
+        f"{degree} ({specialization})- {section_normalized}",        # BS (SE)- 4A
+        # Also add variations with original spaced section if it was different
+        f"{degree}({specialization})-{section}",           # BS(SE)-1 D (original format)
+        f"{degree}({specialization}) - {section}",         # BS(SE) - 1 D  
+        f"{degree} ({specialization})-{section}",          # BS (SE)-1 D
+        f"{degree} ({specialization}) - {section}",       # BS (SE) - 1 D
     ]
     
     # Add the original and normalized versions
@@ -121,6 +135,65 @@ def flexible_semester_match(target_semester: str, email_text: str, allowed_semes
     
     return False
 
+def extract_all_semesters_from_line(line_text: str) -> List[str]:
+    """
+    Extract all semester patterns from a line, including slash-separated ones.
+    
+    Args:
+        line_text: Text line to search for semesters
+    
+    Returns:
+        List of all found semester strings
+    """
+    # Look for semester patterns, including slash-separated ones
+    semester_patterns = [
+        r'\b([A-Z]+\s*\(\s*[A-Z]+\s*\)\s*-?\s*\d+\s*[A-Z])\b',  # BS(SE)-4A variations
+        r'\b([A-Z]+\s+[A-Z]+\s*-?\s*\d+\s*[A-Z])\b',            # Alternative formats
+    ]
+    
+    all_semesters = []
+    
+    # First, check if there are slash-separated semesters
+    if '/' in line_text:
+        # Split by slashes and extract semesters from each part
+        parts = line_text.split('/')
+        for part in parts:
+            for pattern in semester_patterns:
+                matches = re.findall(pattern, part.strip(), re.IGNORECASE)
+                all_semesters.extend(matches)
+    else:
+        # Regular extraction
+        for pattern in semester_patterns:
+            matches = re.findall(pattern, line_text, re.IGNORECASE)
+            all_semesters.extend(matches)
+    
+    return [normalize_semester(sem) for sem in all_semesters]
+
+def find_all_matching_semesters(line_text: str, allowed_semesters: List[str]) -> List[str]:
+    """
+    Find ALL matching semesters from a line text based on allowed semesters.
+    
+    Args:
+        line_text: Text line to search for semesters
+        allowed_semesters: List of allowed semester patterns
+    
+    Returns:
+        List of all matching semester strings
+    """
+    if not allowed_semesters:
+        return []
+    
+    # Extract all semesters from the line
+    found_semesters = extract_all_semesters_from_line(line_text)
+    
+    # Check which ones match the allowed semesters
+    matching_semesters = []
+    for found in found_semesters:
+        if flexible_semester_match(found, line_text, allowed_semesters):
+            matching_semesters.append(found)
+    
+    return matching_semesters
+
 def find_best_semester_match(email_text: str, allowed_semesters: List[str]) -> str:
     """
     Find the best matching semester from email text based on allowed semesters.
@@ -137,8 +210,8 @@ def find_best_semester_match(email_text: str, allowed_semesters: List[str]) -> s
     
     # Look for semester patterns in the email
     semester_patterns = [
-        r'\b([A-Z]+\s*\(\s*[A-Z]+\s*\)\s*-?\s*\d+[A-Z])\b',  # BS(SE)-4A variations
-        r'\b([A-Z]+\s+[A-Z]+\s*-?\s*\d+[A-Z])\b',            # Alternative formats
+        r'\b([A-Z]+\s*\(\s*[A-Z]+\s*\)\s*-?\s*\d+\s*[A-Z])\b',  # BS(SE)-4A variations with optional spaces
+        r'\b([A-Z]+\s+[A-Z]+\s*-?\s*\d+\s*[A-Z])\b',            # Alternative formats with optional spaces
     ]
     
     found_semesters = []
@@ -163,6 +236,12 @@ def find_best_semester_match(email_text: str, allowed_semesters: List[str]) -> s
 def test_semester_matching():
     """Test function to verify semester matching works correctly"""
     test_cases = [
+        ("BS(CS)-1D", ["BS(CS)-1D"]),
+        ("BS (CS) -1D", ["BS(CS)-1D"]),
+        ("BS (CS)-1D", ["BS(CS)-1D"]),
+        ("BS(CS)-1D", ["BS(CS)-1D"]),
+        ("BS(CS) - 1D", ["BS(CS)-1D"]),
+        ("BS (CS) - 1 D", ["BS(CS)-1D"]),  # This was the problematic case
         ("BS(SE)-4A", ["BS(SE)-4A"]),
         ("BS (SE) - 4A", ["BS(SE)-4A"]),
         ("BS( SE)-  4A", ["BS(SE)-4A"]),
@@ -173,10 +252,13 @@ def test_semester_matching():
     print("Testing semester matching...")
     for target, allowed in test_cases:
         result = flexible_semester_match(target, f"Test email with {target}", allowed)
-        print(f"'{target}' matches {allowed}: {result}")
+        normalized = normalize_semester(target)
+        print(f"'{target}' -> '{normalized}' matches {allowed}: {result}")
         
-        variations = generate_semester_variations(allowed[0])
-        print(f"  Variations for '{allowed[0]}': {variations[:3]}...")  # Show first 3
+        if not result:
+            print(f"  WARNING: Failed to match!")
+            variations = generate_semester_variations(allowed[0])
+            print(f"  Variations for '{allowed[0]}': {variations[:5]}...")  # Show first 5
     
     print("All tests completed!")
 

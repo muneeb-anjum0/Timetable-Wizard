@@ -55,6 +55,9 @@ class DataCorrector:
             'room': '-',
             'campus': 'SZABIST University Campus H-8/4 ISB',
             'credits': '(0,1)'
+        },
+        'CSC 1206': {
+            'time': '12:00 PM – 01:30 PM'  # Correct time for Asim Shabir's Probability and Statistics
         }
         # Add more as needed
     }
@@ -126,11 +129,11 @@ class DataCorrector:
     @classmethod
     def _generate_time_fallback(cls, item: Dict[str, Any]) -> str:
         """Generate time fallback based on course patterns"""
-        course = item.get('course', '')
-        course_title = item.get('course_title', '')
+        course = item.get('course', '') or ''
+        course_title = item.get('course_title', '') or ''
         
         # Lab courses typically have longer durations
-        if ('L' in course or 'lab' in course_title.lower()):
+        if ('L' in course or 'lab' in (course_title or '').lower()):
             return 'TBD (Lab Session - 3 hours)'
         
         # Regular courses
@@ -139,8 +142,8 @@ class DataCorrector:
     @classmethod
     def _generate_room_fallback(cls, item: Dict[str, Any]) -> str:
         """Generate room fallback based on course patterns"""
-        course = item.get('course', '')
-        course_title = item.get('course_title', '')
+        course = item.get('course', '') or ''
+        course_title = item.get('course_title', '') or ''
         
         # Check if room data exists in raw_cells or full_text
         raw_text = item.get('full_text', '') or ' '.join(item.get('raw_cells', []))
@@ -167,18 +170,19 @@ class DataCorrector:
                     return 'Online' if room.upper() == 'TBD' else room
         
         # Fallback based on course type
-        if ('L' in course or 'lab' in course_title.lower()):
-            if 'computer' in course_title.lower() or 'CS' in course:
+        course_title_safe = (course_title or '').lower()
+        if ('L' in course or 'lab' in course_title_safe):
+            if 'computer' in course_title_safe or 'CS' in course:
                 return 'Computer Lab (TBD)'
-            elif 'digital' in course_title.lower():
+            elif 'digital' in course_title_safe:
                 return 'Digital Lab'
             else:
                 return 'Lab (TBD)'
         
         # Online courses
-        if ('online' in course_title.lower() or 
-            'virtual' in course_title.lower() or
-            'distance' in course_title.lower()):
+        if ('online' in course_title_safe or 
+            'virtual' in course_title_safe or
+            'distance' in course_title_safe):
             return 'Online'
         
         return 'TBD'
@@ -267,7 +271,8 @@ class EnhancedParser:
         
         # Mark fields that were corrected
         corrected_fields = []
-        if item.get('course') in self.corrector.COURSE_CORRECTIONS:
+        course = item.get('course') or ''
+        if course in self.corrector.COURSE_CORRECTIONS:
             corrected_fields.append('corrected_from_known_issues')
         
         if corrected_fields:

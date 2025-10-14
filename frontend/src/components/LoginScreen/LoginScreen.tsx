@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Mail, LogIn, AlertCircle, Calendar } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -35,106 +34,82 @@ const LoginScreen: React.FC = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -40 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3 }}
-      className={`min-h-screen bg-white flex items-center justify-center p-4`}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: -40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.05 }}
-        className="max-w-md w-full"
-      >
-        <motion.div
-          initial={{ opacity: 0, y: -40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.1 }}
-          className="bg-white rounded-3xl shadow-2xl p-10 border border-gray-100"
-        >
+    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4 ${isExiting ? 'animate-login-exit-smooth' : 'animate-drop-bounce'}`}>
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-20 h-20 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
+        <div className="absolute top-32 right-20 w-32 h-32 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse delay-1000"></div>
+        <div className="absolute bottom-20 left-20 w-24 h-24 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse delay-2000"></div>
+        <div className="absolute bottom-32 right-10 w-28 h-28 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse delay-500"></div>
+      </div>
+      
+      <div className="max-w-md w-full relative z-10">
+        <div className={`bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl p-10 border border-white/50 ${isExiting ? '' : 'animate-drop-bounce delay-100'}`}>
           {/* Header */}
           <div className="text-center mb-10">
-            <motion.div
-              initial={{ opacity: 0, y: -40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.15 }}
-              className="w-24 h-24 flex items-center justify-center mx-auto mb-4 rounded-full bg-white shadow-sm"
-            >
-              <img src="/logoo.svg" alt="Logo" className="w-16 h-16 object-contain p-2" />
-            </motion.div>
-            <motion.h1
-              initial={{ opacity: 0, y: -40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.2 }}
-              className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight"
-            >
+            
+            <h1 className="text-4xl font-extrabold text-gray-900 mb-3 tracking-tight animate-drop-bounce delay-200" style={{color: '#1a1a1a', textShadow: '0 0 20px rgba(59, 130, 246, 0.15)'}}>
               Timetable Wizard
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: -40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.25 }}
-              className="text-base text-gray-600 font-medium"
-            >
-              Sign in to access your university timetable
-            </motion.p>
+            </h1>
+            <p className="text-base text-gray-700 font-medium animate-drop-bounce delay-250">
+              Sign in with your SZABIST account to continue
+            </p>
           </div>
+
           {/* Gmail OAuth Button */}
-          <motion.button
-            initial={{ opacity: 0, y: -40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.3 }}
+          <button
             onClick={handleGmailLogin}
             disabled={isLoading}
-            className="w-full bg-white hover:bg-gray-50 disabled:bg-gray-200 disabled:cursor-not-allowed text-gray-900 font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 shadow-lg border border-gray-300 hover:scale-105 hover:shadow-xl"
+            className="w-full bg-gradient-to-r from-white to-gray-50 hover:from-blue-50 hover:to-indigo-50 disabled:from-gray-100 disabled:to-gray-200 disabled:cursor-not-allowed text-gray-900 font-semibold py-4 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center space-x-3 shadow-xl border-2 border-blue-200/50 hover:border-blue-300 hover:scale-105 hover:shadow-2xl animate-drop-bounce delay-300 group"
           >
             {isLoading ? (
               <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400"></div>
-                <span className="text-gray-700">Connecting to Gmail...</span>
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
+                <span className="text-gray-700 text-lg">Connecting to Gmail...</span>
               </>
             ) : (
               <>
-                <img src="/gmail.svg" alt="Gmail" className="w-7 h-7 mr-2" />
-                <span className="text-gray-900">Sign in with Gmail</span>
+                <img src="/gmail.svg" alt="Gmail" className="w-8 h-8 transition-transform duration-300 group-hover:scale-110" />
+                <span className="text-gray-900 text-lg font-semibold">Sign in with Gmail</span>
               </>
             )}
-          </motion.button>
+          </button>
+
           {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.35 }}
-              className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg mt-6 border border-red-200"
-            >
-              <AlertCircle className="w-5 h-5" />
-              <span className="text-sm">{error}</span>
-            </motion.div>
+            <div className="flex items-center space-x-2 text-red-700 bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-2xl mt-6 border-2 border-red-200/50 backdrop-blur-sm animate-fade-in shadow-lg">
+              <AlertCircle className="w-5 h-5 animate-pulse" />
+              <span className="text-sm font-medium">{error}</span>
+            </div>
           )}
+
+          {/* Feature highlights */}
+          <div className="mt-8 space-y-3 animate-drop-bounce delay-400">
+            <div className="flex items-center space-x-3 text-sm text-gray-600 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+              <Calendar className="w-4 h-4 text-blue-500" />
+              <span>Smart timetable parsing</span>
+            </div>
+            <div className="flex items-center space-x-3 text-sm text-gray-600 bg-indigo-50/50 p-3 rounded-xl border border-indigo-100">
+              <Mail className="w-4 h-4 text-indigo-500" />
+              <span>Email integration</span>
+            </div>
+          </div>
+
           {/* Footer */}
-          <motion.div
-            initial={{ opacity: 0, y: -40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3, delay: 0.4 }}
-            className="mt-10 text-center"
-          >
-            <p className="text-sm text-gray-500 mb-2">
-              Sign in with Gmail to view your timetable.
-            </p>
+          <div className="mt-8 text-center">
+            
             <a
               href="mailto:muneeb.anjum0@gmail.com"
-              className="inline-block text-black hover:text-gray-700 font-semibold text-sm underline transition-all duration-300 mt-1 hover:scale-105"
+              className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-semibold text-sm transition-all duration-300 hover:scale-105 bg-blue-50/50 px-4 py-2 rounded-xl border border-blue-100"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Need help? Contact Support
+              <span>Need help? Contact Support</span>
             </a>
-          </motion.div>
-        </motion.div>
-      </motion.div>
-    </motion.div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
-}
+};
 
 export default LoginScreen;

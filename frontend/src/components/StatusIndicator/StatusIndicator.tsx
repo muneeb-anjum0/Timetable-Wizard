@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { AlertCircle, CheckCircle, Clock, Loader } from 'lucide-react';
 
 interface StatusIndicatorProps {
@@ -39,17 +38,16 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({ status, message }) =>
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -40 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ type: 'spring', stiffness: 600, damping: 18, duration: 0.3 }}
-      className={`flex items-center p-4 rounded-lg border transition-all duration-300 hover:shadow-md ${getStatusColors()}`}
-    >
-      <div>
+    <div className={`flex items-center p-4 rounded-xl border-2 transition-all duration-300 animate-drop-bounce delay-100 hover:shadow-lg hover:scale-105 enhanced-hover subtle-glow ${getStatusColors()}`}>
+      <div className="relative">
         {getStatusIcon()}
+        <div className="absolute -top-1 -right-1 w-2 h-2 bg-current rounded-full opacity-60 animate-ping"></div>
       </div>
       <span className="ml-3 text-sm font-medium">{message}</span>
-    </motion.div>
+      <div className="ml-auto">
+        <div className="w-2 h-2 rounded-full bg-current opacity-40"></div>
+      </div>
+    </div>
   );
 };
 

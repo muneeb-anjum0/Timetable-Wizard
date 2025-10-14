@@ -21,20 +21,17 @@ CORS(app, origins=["*"], supports_credentials=True,
 
 # Enhanced logging setup
 logging.basicConfig(
-    level=logging.INFO,  # Changed from WARNING to INFO for more visibility
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger(__name__)
 
 # Reduce noise from external libraries during startup
 logging.getLogger('scraper.config').setLevel(logging.WARNING)
 logging.getLogger('database.supabase_client').setLevel(logging.WARNING)
-
-@app.before_request
-def log_request_info():
-    """Log all incoming requests"""
-    print(f"REQUEST: {request.method} {request.url}")
-    logger.info(f"Incoming request: {request.method} {request.url}")
 
 # Import after CORS setup
 from scraper.scheduler import run_once
@@ -62,80 +59,24 @@ def get_user_from_request():
         logger.error(f"Error getting user: {e}")
         return None, jsonify({'error': 'User management error'}), 500
 
-@app.route('/', methods=['GET'])
-def root():
-    """Simple root endpoint for testing"""
-    try:
-        print("ROOT ENDPOINT CALLED - Flask is working!")
-        logger.info("Root endpoint accessed successfully")
-        return jsonify({
-            'status': 'ok',
-            'message': 'Timetable Wizard API is running',
-            'timestamp': datetime.now().isoformat()
-        })
-    except Exception as e:
-        print(f"ERROR in root endpoint: {e}")
-        logger.error(f"Error in root endpoint: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     try:
-        print("HEALTH CHECK ENDPOINT CALLED")
-        logger.info("Health check endpoint accessed")
-        
-        # Check basic app functionality
-        current_time = datetime.now().isoformat()
-        
-        # Check environment variables
-        supabase_url = os.environ.get('SUPABASE_URL')
-        supabase_key = os.environ.get('SUPABASE_SERVICE_KEY')
-        
-        health_data = {
+        return jsonify({
             'status': 'healthy',
-            'timestamp': current_time,
-            'environment': {
-                'supabase_configured': bool(supabase_url and supabase_key),
-                'port': os.environ.get('PORT', '5000')
-            }
-        }
-        
-        print(f"HEALTH CHECK RESPONSE: {health_data}")
-        return jsonify(health_data)
-        
+            'timestamp': datetime.now().isoformat(),
+            'config_loaded': True,
+            'supabase_connected': True
+        })
     except Exception as e:
-        print(f"HEALTH CHECK ERROR: {e}")
-        logger.error(f"Health check failed: {e}")
         return jsonify({
             'status': 'unhealthy',
             'error': str(e),
             'timestamp': datetime.now().isoformat()
         }), 500
 
-@app.route('/api/test', methods=['GET'])
-def test_endpoint():
-    """Simple test endpoint"""
-    print("TEST ENDPOINT CALLED")
-    return jsonify({'message': 'Test endpoint working', 'status': 'ok'})
-
 @app.route('/api/auth/gmail', methods=['GET'])
-def get_backend_base_url():
-    """Get the backend base URL dynamically based on environment"""
-    # Check if we're in production (Railway)
-    railway_domain = os.environ.get('RAILWAY_STATIC_URL') or os.environ.get('RAILWAY_PROJECT_DOMAIN')
-    if railway_domain:
-        return f"https://{railway_domain}"
-    
-    # Check for custom domain environment variable
-    custom_domain = os.environ.get('BACKEND_DOMAIN')
-    if custom_domain:
-        return f"https://{custom_domain}"
-    
-    # Default to localhost for development
-    port = os.environ.get('PORT', '5000')
-    return f"http://localhost:{port}"
-
 def gmail_auth():
     """Initiate Gmail OAuth flow"""
     try:
@@ -147,40 +88,23 @@ def gmail_auth():
         # Allow insecure transport for local development
         os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
         
-        # Load client secrets from env vars if available, otherwise fallback to file
-        env_client_id = os.environ.get('GOOGLE_CLIENT_ID')
-        env_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
-        if env_client_id and env_client_secret:
-            from google_auth_oauthlib.flow import Flow as EnvFlow
-            client_config = {
-                "web": {
-                    "client_id": env_client_id,
-                    "client_secret": env_client_secret,
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [get_backend_base_url() + "/api/auth/gmail/callback"]
-                }
-            }
-            flow = Flow.from_client_config(client_config, scopes=['https://www.googleapis.com/auth/gmail.readonly',
-                                                                  'https://www.googleapis.com/auth/userinfo.email',
-                                                                  'https://www.googleapis.com/auth/userinfo.profile',
-                                                                  'openid'])
-        else:
-            # Load client secrets file
-            client_secrets_file = os.path.join(os.path.dirname(__file__), 'credentials', 'client_secret.json')
-            if not os.path.exists(client_secrets_file):
-                return jsonify({'error': 'Client secrets file not found'}), 500
-            flow = Flow.from_client_secrets_file(
-                client_secrets_file,
-                scopes=['https://www.googleapis.com/auth/gmail.readonly',
-                       'https://www.googleapis.com/auth/userinfo.email',
-                       'https://www.googleapis.com/auth/userinfo.profile',
-                       'openid']
-            )
+        # Load client secrets
+        client_secrets_file = os.path.join(os.path.dirname(__file__), 'credentials', 'client_secret.json')
         
-        # Set the redirect URI dynamically based on environment
-        backend_url = get_backend_base_url()
-        flow.redirect_uri = f"{backend_url}/api/auth/gmail/callback"
+        if not os.path.exists(client_secrets_file):
+            return jsonify({'error': 'Client secrets file not found'}), 500
+            
+        # Create flow instance to manage the OAuth 2.0 Authorization Grant Flow steps
+        flow = Flow.from_client_secrets_file(
+            client_secrets_file,
+            scopes=['https://www.googleapis.com/auth/gmail.readonly',
+                   'https://www.googleapis.com/auth/userinfo.email',
+                   'https://www.googleapis.com/auth/userinfo.profile',
+                   'openid']
+        )
+        
+        # Set the redirect URI - always use localhost for OAuth (Google OAuth config)
+        flow.redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
         
         # Generate authorization URL
         authorization_url, state = flow.authorization_url(
@@ -211,35 +135,19 @@ def gmail_callback():
         # Allow insecure transport for local development
         os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
         
-        # Load client secrets from env vars if available, otherwise fallback to file
-        env_client_id = os.environ.get('GOOGLE_CLIENT_ID')
-        env_client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
-        if env_client_id and env_client_secret:
-            client_config = {
-                "web": {
-                    "client_id": env_client_id,
-                    "client_secret": env_client_secret,
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [get_backend_base_url() + "/api/auth/gmail/callback"]
-                }
-            }
-            flow = Flow.from_client_config(client_config, scopes=['https://www.googleapis.com/auth/gmail.readonly',
-                                                                  'https://www.googleapis.com/auth/userinfo.email',
-                                                                  'https://www.googleapis.com/auth/userinfo.profile',
-                                                                  'openid'])
-        else:
-            client_secrets_file = os.path.join(os.path.dirname(__file__), 'credentials', 'client_secret.json')
-            flow = Flow.from_client_secrets_file(
-                client_secrets_file,
-                scopes=['https://www.googleapis.com/auth/gmail.readonly',
-                       'https://www.googleapis.com/auth/userinfo.email',
-                       'https://www.googleapis.com/auth/userinfo.profile',
-                       'openid']
-            )
-        # Set redirect URI dynamically based on environment
-        backend_url = get_backend_base_url()
-        flow.redirect_uri = f"{backend_url}/api/auth/gmail/callback"
+        # Load client secrets
+        client_secrets_file = os.path.join(os.path.dirname(__file__), 'credentials', 'client_secret.json')
+        
+        # Create flow instance
+        flow = Flow.from_client_secrets_file(
+            client_secrets_file,
+            scopes=['https://www.googleapis.com/auth/gmail.readonly',
+                   'https://www.googleapis.com/auth/userinfo.email',
+                   'https://www.googleapis.com/auth/userinfo.profile',
+                   'openid']
+        )
+        # Set redirect URI - always use localhost for OAuth (Google OAuth config)
+        flow.redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
         
         # Get the authorization response
         authorization_response = request.url
@@ -269,8 +177,7 @@ def gmail_callback():
                         client_secrets_file,
                         scopes=actual_scopes
                     )
-                    backend_url = get_backend_base_url()
-                    flow.redirect_uri = f"{backend_url}/api/auth/gmail/callback"
+                    flow.redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
                 
                 flow.fetch_token(authorization_response=authorization_response)
             else:
@@ -343,8 +250,13 @@ def gmail_callback():
         <html>
         <body>
         <script>
-        // Try to communicate with parent window. Prefer the actual frontend origin
-        const frontendOrigin = new URL(document.referrer || window.location.href).origin || 'http://localhost:3000';
+        // Try to communicate with parent window using multiple target origins
+        const targetOrigins = [
+            'http://localhost:3000',
+            'http://127.0.0.1:3000', 
+            'http://192.168.100.250:3000'
+        ];
+        
         const message = {{
             type: 'GMAIL_AUTH_SUCCESS',
             user: {{
@@ -352,21 +264,15 @@ def gmail_callback():
                 email: '{user_email}'
             }}
         }};
-
-        try {{
-            // Primary: post to the precise frontend origin
-            window.opener.postMessage(message, frontendOrigin);
-        }} catch (e) {{
-            console.warn('Primary postMessage failed:', e);
-        }}
-
-        try {{
-            // Fallback: broad postMessage - some browsers block wildcard origins but it's useful as last resort
-            window.opener.postMessage(message, '*');
-        }} catch (e) {{
-            console.warn('Fallback postMessage failed:', e);
-        }}
-
+        
+        targetOrigins.forEach(origin => {{
+            try {{
+                window.opener.postMessage(message, origin);
+            }} catch (e) {{
+                console.log('Failed to post to:', origin, e);
+            }}
+        }});
+        
         setTimeout(() => window.close(), 1000);
         </script>
         <p>Authentication successful! This window will close automatically.</p>

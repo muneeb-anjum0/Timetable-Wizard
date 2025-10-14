@@ -2,32 +2,6 @@
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
 /* Custom Scrollbar Styles */
 ::-webkit-scrollbar {
   width: 10px;
@@ -46,20 +20,28 @@
   border-radius: 8px;
 }
 
-/* Custom animations for semester configuration prompts */
-@keyframes pulse-glow-blue {
-  0%, 100% {
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-    border-color: rgb(59, 130, 246);
-  }
-  50% {
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.6);
-    border-color: rgb(37, 99, 235);
-  }
+/* Hide scrollbars in timetable container and all its children */
+.timetable-container::-webkit-scrollbar,
+.timetable-container *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
-.animate-pulse-glow-blue {
-  animation: pulse-glow-blue 2s ease-in-out infinite;
+.timetable-container,
+.timetable-container * {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Force hide scrollbars on table elements */
+.timetable-container .overflow-x-auto::-webkit-scrollbar {
+  display: none !important;
+}
+
+.timetable-container .overflow-x-auto {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 /* For Firefox */
@@ -68,188 +50,14 @@ html {
   scrollbar-color: #93c5fd #f3f4f6;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Refined Animation Keyframes - Subtle but Present */
+/* Simple fade-in for basic elements */
 @keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slide-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(15px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes gentle-scale {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes modal-enter {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes soft-bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}
-
-@keyframes fall-down {
-  from {
-    opacity: 0;
-    transform: translateY(-40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes dashboard-enter {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes login-exit {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-15px) scale(1.01);
-  }
-}
-
-/* Refined Animation Classes */
 .animate-fade-in {
-  animation: fade-in 0.4s ease-out;
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up 0.5s ease-out;
-}
-
-.animate-slide-in-up {
-  animation: slide-in-up 0.4s ease-out;
-}
-
-.animate-gentle-scale {
-  animation: gentle-scale 0.4s ease-out;
-}
-
-.animate-modal-enter {
-  animation: modal-enter 0.3s ease-out;
-}
-
-.animate-soft-bounce {
-  animation: soft-bounce 2s ease-in-out infinite;
-}
-
-.animate-fall-down {
-  animation: fall-down 0.7s ease-out;
-  animation-fill-mode: both;
-}
-
-.animate-dashboard-enter {
-  animation: dashboard-enter 0.8s ease-out;
-}
-
-.animate-login-exit {
-  animation: login-exit 0.6s ease-out forwards;
-}
-
-/* Staggered delays for falling effect */
-.animation-delay-50 {
-  animation-delay: 50ms;
-}
-
-.animation-delay-100 {
-  animation-delay: 100ms;
-}
-
-.animation-delay-150 {
-  animation-delay: 150ms;
-}
-
-.animation-delay-200 {
-  animation-delay: 200ms;
-}
-
-.animation-delay-250 {
-  animation-delay: 250ms;
-}
-
-.animation-delay-300 {
-  animation-delay: 300ms;
-}
-
-.animation-delay-350 {
-  animation-delay: 350ms;
-}
-
-.animation-delay-400 {
-  animation-delay: 400ms;
-}
-
-.animation-delay-450 {
-  animation-delay: 450ms;
-}
-
-.animation-delay-500 {
-  animation-delay: 500ms;
+  animation: fade-in 0.3s ease-out;
 }
 
 /* Respect reduced motion preferences */
@@ -261,10 +69,6 @@ html {
   }
   
   .animate-spin {
-    animation: none !important;
-  }
-  
-  .animate-soft-bounce {
     animation: none !important;
   }
 }
