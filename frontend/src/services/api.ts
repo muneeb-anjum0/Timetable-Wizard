@@ -21,7 +21,7 @@ console.log('API Base URL:', API_BASE_URL); // Debug log
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000, // Increased to 60 seconds for scraper operations
+  timeout: 120000, // Increased to 2 minutes for scraper operations
 });
 
 // Rate limiting for API calls

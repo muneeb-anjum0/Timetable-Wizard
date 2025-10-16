@@ -527,7 +527,7 @@ function AppContent() {
       {/* Minimal Footer */}
       <footer className="bg-transparent border-0">
         <div className="w-full py-1 text-center text-xs text-gray-300">
-          &copy; {new Date().getFullYear()} Timetable Wizard
+          &copy; {new Date().getFullYear()} Timetable Wizard v1.0
         </div>
       </footer>
 
