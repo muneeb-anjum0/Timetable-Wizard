@@ -108,6 +108,17 @@ class SupabaseManager:
             logger.error(f"Error getting cache for user {user_id}: {e}")
             return None
 
+    def clear_user_cache(self, user_id: str) -> bool:
+        """Clear all timetable cache for a specific user"""
+        try:
+            result = self.client.table('timetable_cache').delete().eq('user_id', user_id).execute()
+            logger.info(f"Cleared timetable cache for user {user_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error clearing cache for user {user_id}: {e}")
+            return False
+
     def get_latest_timetable_timestamp(self, user_id: str = None) -> Optional[str]:
         """Get the timestamp of the most recent timetable entry"""
         try:

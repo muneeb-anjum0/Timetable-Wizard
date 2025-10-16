@@ -429,6 +429,13 @@ def scrape_now():
             
         logger.info(f"Starting manual scrape via API for user {user['email']}")
         
+        # Check if force_refresh parameter is provided
+        force_refresh = request.json.get('force_refresh', False) if request.is_json else False
+        
+        if force_refresh:
+            logger.info(f"Force refresh requested - clearing cache for user {user['id']}")
+            supabase_manager.clear_user_cache(user['id'])
+        
         # Get user settings for the scrape
         user_settings = supabase_manager.get_user_settings(user['id'])
         
@@ -462,6 +469,34 @@ def scrape_now():
             'error': str(e),
             'timestamp': datetime.now().isoformat()
         }), 500
+
+@app.route('/api/cache/clear', methods=['POST'])
+def clear_cache():
+    """Clear cached data for the authenticated user"""
+    try:
+        user, error_response, status_code = get_user_from_request()
+        if error_response:
+            return error_response, status_code
+            
+        logger.info(f"Clearing cache for user {user['email']}")
+        
+        success = supabase_manager.clear_user_cache(user['id'])
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': 'Cache cleared successfully',
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to clear cache'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error in clear_cache: {e}")
+        return jsonify({'success': False, 'message': 'Internal server error'}), 500
 
 @app.route('/api/timetable', methods=['GET'])
 def get_latest_timetable():

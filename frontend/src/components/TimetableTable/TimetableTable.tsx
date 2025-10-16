@@ -257,7 +257,7 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
                       <div className="flex flex-wrap gap-2 text-xs text-gray-500">
                         <div className="flex items-center">
                           <span className="mr-1">👨‍🏫</span>
-                          <span className="truncate">{getDisplayFaculty(item)}</span>
+                          <span>{getDisplayFaculty(item)}</span>
                         </div>
                         <div className="flex items-center">
                           <span className="mr-1">⏰</span>

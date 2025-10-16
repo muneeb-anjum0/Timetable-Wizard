@@ -404,8 +404,11 @@ def _header_map(tr) -> Dict[str, int]:
         if "sr" in h:                mapping.setdefault("sr_no", i)
         if "dept" in h:              mapping.setdefault("dept", i)
         if "program" in h:           mapping.setdefault("program", i)
-        if "class" in h or "section" in h: mapping.setdefault("class_section", i)
-        if "course" in h:            mapping.setdefault("course", i)
+        if "class" in h or "section" in h or "semester" in h: mapping.setdefault("class_section", i)
+        # Handle "COURSE TITLE" as course_title, not both course and course_title
+        if "course title" in h:      mapping.setdefault("course_title", i)
+        elif "course" in h:          mapping.setdefault("course", i)
+        elif "title" in h:           mapping.setdefault("course_title", i)
         if "faculty" in h or "teacher" in h: mapping.setdefault("faculty", i)
         if "room" in h:              mapping.setdefault("room", i)
         if "time" in h:              mapping.setdefault("time", i)
@@ -465,16 +468,27 @@ def parse_schedule_html(html: str, semesters: List[str]) -> List[Dict]:
         header_idx = 0
     colmap = _header_map(trs[header_idx])
 
-    # If no headers detected, fall back to common indices (seen in your screenshot)
-    # Sr, Dept, Program, Class/Section, Course, Faculty, Room, Time, Campus
-    fallback = {
-        "sr_no": 0, "dept": 1, "program": 2, "class_section": 3,
-        "course": 4, "faculty": 5, "room": 6, "time": 7, "campus": 8
-    }
-    for k, v in fallback.items():
-        colmap.setdefault(k, v)
+    # Only apply fallback if no meaningful headers were detected
+    # Check if we have detected the main columns
+    essential_columns = ['class_section', 'faculty', 'room', 'time', 'campus']
+    detected_columns = sum(1 for col in essential_columns if col in colmap)
+    
+    if detected_columns < 3:  # If we detected fewer than 3 essential columns, use fallback
+        # If no headers detected, fall back to common indices (seen in your screenshot)
+        # Sr, Dept, Program, Class/Section, Course, Faculty, Room, Time, Campus
+        fallback = {
+            "sr_no": 0, "dept": 1, "program": 2, "class_section": 3,
+            "course": 4, "faculty": 5, "room": 6, "time": 7, "campus": 8
+        }
+        for k, v in fallback.items():
+            colmap.setdefault(k, v)
 
     logger.info(f"Column mapping: {colmap}")
+    
+    # Debug: Let's also see what the header row looks like
+    if header_idx is not None and header_idx < len(trs):
+        header_cells = [_get_text(th) for th in trs[header_idx].find_all(["th", "td"])]
+        logger.info(f"Header row cells: {header_cells}")
 
     want = [_tok(s) for s in (semesters or [])]
     logger.info(f"Tokenized semester filters: {want}")
@@ -500,6 +514,12 @@ def parse_schedule_html(html: str, semesters: List[str]) -> List[Dict]:
         
         # Debug: Always log what was found in this row
         logger.debug(f"Row {processed_rows}: class_section='{class_section}', tokenized='{class_tok}'")
+        
+        # Enhanced debug for PhD Psychology -2 specifically
+        if "PhD Psychology" in class_section or any("PhD Psychology" in str(cell) for cell in cells):
+            logger.info(f"DEBUG PhD Psychology row {processed_rows}: full cells = {cells}")
+            logger.info(f"DEBUG PhD Psychology row {processed_rows}: colmap = {colmap}")
+            logger.info(f"DEBUG PhD Psychology row {processed_rows}: course='{pick('course')}', faculty='{pick('faculty')}', room='{pick('room')}'")
         
         keep = False
         match_reason = ""

@@ -118,6 +118,10 @@ def run_once(user_email: str = "me", show_table: bool = False, user_id: Optional
         user_id: Supabase user ID for storing results
         user_settings: User-specific settings (overrides global settings)
     """
+    LOGGER.info("🔥🔥🔥 RUN_ONCE CALLED! 🔥🔥🔥")
+    LOGGER.info(f"User: {user_email}, ID: {user_id}")
+    LOGGER.info(f"Settings: {user_settings}")
+    LOGGER.info("🔥🔥🔥 RUN_ONCE CALLED! 🔥🔥🔥")
     # Import here to ensure config is loaded first
     from .config import settings
     
@@ -233,7 +237,14 @@ def run_once(user_email: str = "me", show_table: bool = False, user_id: Optional
             LOGGER.warning("HTML content is empty or None")
 
         LOGGER.info(f"Parsing HTML with semester filters: {allowed_semesters}")
+        LOGGER.info("🚀 CALLING ENHANCED PARSER 🚀")
         items = parse_schedule_enhanced(html, allowed_semesters)
+        LOGGER.info(f"🎯 ENHANCED PARSER RETURNED: {len(items)} schedule items")
+        
+        # Log first few items to verify enhanced parsing worked
+        for i, item in enumerate(items[:2]):
+            LOGGER.info(f"  Scheduler Item {i+1}: course='{item.get('course')}', title='{item.get('course_title')}', faculty='{item.get('faculty')}', room='{item.get('room')}'")
+        
         LOGGER.info(f"Parsed {len(items)} schedule items with enhanced validation")
 
         # Create summary statistics
