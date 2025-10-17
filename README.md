@@ -1,289 +1,153 @@
-# 📚 SZABIST Timetable Scraper
+# Timetable Wizard
 
-<div align="center">
+A smart automation solution that solves the daily struggle of manually searching through emails for university timetables. Built specifically for SZABIST University students who receive daily schedule updates via email.
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
-[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
-[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+## The Problem I Solved
 
-*A smart solution for SZABIST students to automatically extract and organize daily timetable emails into a clean, filterable schedule view.*
+Every day at SZABIST University, students receive their class timetables through email. Finding today's schedule meant digging through countless emails, scrolling through lengthy content, and manually parsing the information. This repetitive task was eating up precious time that could be better spent on actual studies.
 
-[🚀 Features](#-features) • [📋 For Other Universities](#-for-other-universities) • [⚡ Quick Start](#-quick-start) • [🔧 Setup Guide](#-setup-guide) • [🤝 Contributing](#-contributing)
+## How It Works
 
-</div>
+Timetable Wizard automates the entire process by:
 
----
+- **Gmail Integration**: Connects to your Gmail account using Google's OAuth API to securely access your emails
+- **Smart Email Parsing**: Searches for emails containing timetable information using intelligent keyword matching
+- **HTML Content Extraction**: Parses complex email HTML content to extract structured schedule data
+- **Multi-User Support**: Each user gets their own personalized dashboard with isolated data
+- **Semester Filtering**: Configurable filters to show only relevant courses for your specific semester
+- **Real-time Updates**: Automatic scraping with scheduler that checks for new timetables
 
-## 🌟 The Problem
+## Technology Stack
 
-**SZABIST sends timetable emails DAILY** 📧, which creates a major headache for students:
+### Backend (Python/Flask)
+- **Flask API**: RESTful endpoints serving the React frontend
+- **Gmail API**: Official Google API integration for secure email access
+- **BeautifulSoup**: HTML parsing and content extraction
+- **APScheduler**: Automated daily scraping functionality
+- **Supabase**: PostgreSQL database for multi-user data management
+- **Rich**: Enhanced terminal UI for debugging and monitoring
 
-- 📬 **Daily Email Overload**: Every single day, you get a new timetable email
-- 🔍 **Manual Searching**: Have to dig through your inbox daily to find your classes
-- 📅 **Semester Filtering**: Need to manually filter out irrelevant semesters from the massive list
-- ⏰ **Time Waste**: Spending precious minutes every day just to see "What classes do I have today?"
-- 📱 **Mobile Unfriendly**: University emails are poorly formatted and hard to read on phones
+### Frontend (React/TypeScript)
+- **React 19**: Modern UI with TypeScript for type safety
+- **Tailwind CSS**: Responsive and clean interface design
+- **Framer Motion**: Smooth animations and transitions
+- **Axios**: API communication with the Flask backend
+- **Context API**: State management for authentication and data
 
-## 💡 The Solution
+### Database Design
 
-This scraper **automatically**:
-1. 🔐 **Connects to your Gmail** using secure OAuth (no password needed!)
-2. 📨 **Finds SZABIST timetable emails** from your inbox
-3. 🧠 **Extracts YOUR semester's classes** using smart filtering
-4. 📊 **Displays them in a clean table** - sorted by time, day, and course
-5. 👥 **Supports multiple users** - your roommates can use it too!
+The system uses Supabase (PostgreSQL) with a clean multi-tenant architecture:
 
-### ✨ What You Get
-- **One-click access** to your daily schedule
-- **Clean, mobile-friendly** table view
-- **Semester filtering** - only see classes for semesters you care about
-- **No more email hunting** - everything organized in one place
-- **Shareable** - run it locally and let your friends use it too
+- **Users Table**: Stores user authentication and profile information
+- **Tokens Table**: Securely manages Gmail OAuth tokens for each user
+- **Timetable Cache**: Stores parsed schedule data with automatic cleanup
+- **Audit Logs**: Tracks scraping activities and system health
 
----
+Key design decisions:
+- User isolation ensures data privacy between different accounts
+- Token encryption for secure Gmail access
+- Automatic cache expiration to keep data fresh
+- Optimized queries for fast frontend loading
 
-## 🚀 Features
+## Features That Make Life Easier
 
-### � **Smart Email Processing**
-- **SZABIST Email Recognition**: Automatically identifies timetable emails from SZABIST
-- **Daily Auto-Sync**: Set it up once, get updates automatically
-- **HTML Parsing**: Extracts clean data from messy university email formats
-- **Duplicate Prevention**: Won't show the same class twice
+### Smart Parsing Engine
+- Handles multiple email formats and layouts
+- Robust error handling for malformed content
+- Intelligent semester detection and filtering
+- Course title corrections and data validation
 
-### 🎯 **Semester Filtering**
-- **Choose Your Semesters**: Only see classes for semesters you're enrolled in
-- **Easy Management**: Add/remove semesters with simple clicks
-- **Smart Organization**: Groups classes by semester, day, and time
+### User Experience
+- One-click Gmail authentication
+- Clean tabular display of schedule data
+- Real-time status updates during scraping
+- Responsive design for mobile and desktop
+- Semester management for filtering relevant courses
 
-### 📱 **Clean Interface**
-- **Mobile-Friendly**: Works great on your phone during campus walks
-- **Sortable Tables**: Click column headers to sort by time, course, room, etc.
-- **Real-Time Status**: See when data was last updated
-- **Multi-User**: Your friends can create their own profiles
+### Developer Experience
+- Comprehensive logging and error tracking
+- Health check endpoints for monitoring
+- Environment-based configuration
+- Docker support for easy deployment
+- Extensive error handling and recovery
 
-### � **Secure & Private**
-- **OAuth Login**: Uses Google's secure login (no passwords stored)
-- **Personal Data**: Each user only sees their own timetable
-- **Local Hosting**: Run it on your laptop/PC for full control
+## Quick Start
 
----
+### Prerequisites
+- Python 3.8+
+- Node.js 16+
+- Gmail account with API access enabled
+- Supabase account for database
 
-## 📋 For Other Universities
+### Setup
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/muneeb-anjum0/Timetable-Wizard.git
+   cd Timetable-Wizard
+   ```
 
-**This scraper is built for SZABIST** but can be adapted for other universities that send timetable emails! 
+2. **Backend Setup**
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   ```
 
-### � **To Use With Your University**:
+3. **Environment Configuration**
+   Create `.env` file with:
+   ```
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_SERVICE_KEY=your_service_key
+   ALLOWED_SEMESTERS=BS (SE) - 5C, BS (CS) - 7A
+   ```
 
-1. **Check Email Format**: Your university must send timetable emails to Gmail
-2. **Modify Email Parsing**: Update the parser in `backend/scraper/parser.py` to understand your university's email format
-3. **Adjust Semester Logic**: Modify semester detection in `backend/scraper/semester_matcher.py`
-4. **Test & Customize**: Run test scrapes and adjust the parsing logic as needed
+4. **Frontend Setup**
+   ```bash
+   cd frontend
+   npm install
+   npm start
+   ```
 
-### �️ **What Needs Changing**:
-- **Email Subject Patterns**: How your university titles timetable emails
-- **HTML Structure**: How the timetable data is formatted in emails
-- **Semester Names**: Your university's semester naming convention
-- **Course Code Format**: How your university formats course codes
+5. **Google OAuth Setup**
+   - Create Google Cloud project
+   - Enable Gmail API
+   - Download client credentials to `backend/credentials/client_secret.json`
 
-*Want help adapting this for your university? Open an issue with sample emails (remove personal info) and I'll help!*
+## Architecture Highlights
 
----
+### Security First
+- OAuth 2.0 authentication flow
+- Encrypted token storage
+- CORS configuration for secure API access
+- Input validation and sanitization
 
-## 🔧 Setup Guide
+### Scalability
+- Multi-user architecture from day one
+- Database optimization for concurrent users
+- Caching layers for improved performance
+- Modular design for easy feature additions
 
-### **📋 What You Need**
-- **Computer with Python & Node.js** (Windows/Mac/Linux)
-- **Gmail account** (your SZABIST email should forward here)
-- **Google account** for API access (can be same as Gmail)
-- **Supabase account** (free tier works fine)
+### Reliability
+- Comprehensive error handling and recovery
+- Automatic retry mechanisms for API calls
+- Graceful degradation when services are unavailable
+- Extensive logging for debugging and monitoring
 
-### **⏱️ Time Required**: ~15-20 minutes for first-time setup
+## Impact
 
-### **🎯 End Result**: 
-A local web app running on your computer that automatically shows your SZABIST timetable in a clean format!
+This project transforms a daily 10-15 minute manual task into a seamless automated experience. Students can now focus on their studies instead of hunting through emails for their class schedules. The clean interface and reliable automation have made schedule management effortless for SZABIST University students.
 
----
+## Going Live Soon
 
-## ⚡ Quick Start
+The application is currently in final testing phase and will be deployed for public use once a few remaining bugs are resolved. Stay tuned for the live deployment announcement!
 
-### **🚀 Step 1: Download the Code**
-```bash
-git clone https://github.com/muneeb-anjum0/Timetable-Wizard.git
-cd Timetable-Wizard
-```
+## Future Enhancements
 
-### **🐍 Step 2: Setup Python Backend**
-
-#### **Install Python Dependencies**
-```bash
-cd backend
-pip install -r requirements.txt
-```
-
-#### **Get Google Gmail API Access**
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create new project (name it "SZABIST Scraper" or whatever you like)
-3. Enable "Gmail API" 
-4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
-5. Choose "Desktop Application"
-6. Download the JSON file and save it as `backend/credentials/client_secret.json`
-
-#### **Setup Database (Supabase)**
-1. Go to [Supabase](https://supabase.com) and create free account
-2. Create new project
-3. Go to Settings → API and copy:
-   - Project URL
-   - Service Role Key (the `service_role` one, not `anon`)
-
-#### **Create Environment File**
-Create `backend/.env` file:
-```env
-# Your Supabase details
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=your_service_role_key_here
-
-# Keep these as-is
-TZ=Asia/Karachi
-PORT=5000
-```
-
-#### **Setup Database Tables**
-The app will create tables automatically, but you can create them manually in Supabase if needed.
-
-### **⚛️ Step 3: Setup React Frontend**
-```bash
-cd ../frontend
-npm install
-```
-
-### **🎉 Step 4: Start Everything**
-From the main project folder:
-```bash
-# This starts both backend and frontend automatically
-run.bat
-```
-
-**OR start manually:**
-```bash
-# Terminal 1 - Backend
-cd backend
-python app.py
-
-# Terminal 2 - Frontend  
-cd frontend
-npm start
-```
-
-### **🌐 Step 5: Use the App**
-1. Open browser to `http://localhost:3000`
-2. Click "Sign in with Gmail" 
-3. Allow access to your Gmail
-4. Click "Refresh Data" to scrape your first timetable
-5. Go to "Manage Semesters" and add your current semesters (e.g., "Fall 2025", "7th Semester")
-6. Enjoy your clean, organized timetable! 🎊
+- Mobile app development
+- Calendar integration (Google Calendar, Outlook)
+- WhatsApp/SMS notifications for schedule changes
+- Analytics dashboard for attendance tracking
+- Integration with university's official systems
 
 ---
 
-## 📖 How to Use Daily
-
-### **🌅 Daily Routine**
-1. **Open the app**: `http://localhost:3000` 
-2. **Check your schedule**: Your classes are already organized and ready!
-3. **Need updates?**: Click "Refresh Data" if you got new timetable emails
-
-### **⚙️ First-Time Setup Tasks**
-- **Add your semesters**: Click "Manage Semesters" and add things like "Fall 2025", "8th Semester", etc.
-- **Test the scraper**: Click "Refresh Data" to make sure it finds your SZABIST emails
-- **Bookmark it**: Add `http://localhost:3000` to your browser bookmarks
-
-### **👥 Sharing with Friends**
-Your friends can use the same app:
-1. **They need their own Gmail**: Each person signs in with their own Google account
-2. **Same computer**: Multiple people can use the same running instance
-3. **Their data is separate**: Everyone only sees their own timetable
-
-### **🔄 Automated Updates** (Optional)
-- The app can check for new emails automatically in the background
-- You can set this up in the scheduler settings
-- No need to manually refresh every day!
-
----
-
-## 🐛 Troubleshooting
-
-### **❌ Common Issues & Solutions**
-
-#### **"Can't find timetable emails"**
-- ✅ Make sure SZABIST emails are in your Gmail (check forwarding settings)
-- ✅ Check if emails have subject containing "timetable" or "schedule"
-- ✅ Try refreshing the data again
-
-#### **"Google OAuth Error"**
-- ✅ Make sure `client_secret.json` is in the right place
-- ✅ Check your Google Cloud Console project is set up correctly
-- ✅ Make sure Gmail API is enabled
-
-#### **"Database Connection Error"**  
-- ✅ Double-check your Supabase URL and Service Key in `.env`
-- ✅ Make sure your Supabase project is running (not paused)
-
-#### **"No classes showing up"**
-- ✅ Add your semester names in "Manage Semesters" 
-- ✅ Make sure the semester names match what's in your SZABIST emails
-- ✅ Try different variations like "Fall 2025", "7th Semester", "BS-CS-7"
-
-### **📞 Need Help?**
-- Open an issue on GitHub with:
-  - What error you're seeing
-  - Which step you're stuck on  
-  - Screenshot if possible (hide personal info!)
-
----
-
-## 🤝 Contributing
-
-### **🎯 Want to Help Make This Better?**
-
-#### **🐛 Report Bugs**
-- Found something broken? Open a GitHub issue!
-- Include screenshots and error messages
-
-#### **💡 Suggest Features**  
-- Want a specific feature? Let me know in the issues!
-- Ideas: calendar export, mobile app, better semester detection
-
-#### **💻 Code Contributions**
-1. Fork the repo
-2. Make your changes
-3. Test with your own SZABIST emails
-4. Submit a pull request
-
-#### **🏫 University Adaptations**
-- Using this for another university? Share your modifications!
-- Help others adapt it for their schools
-
----
-
-## 📝 License
-
-This project is open source under the MIT License. Feel free to use, modify, and share!
-
----
-
-<div align="center">
-
-**Built by a SZABIST student, for SZABIST students 🎓**
-
-*Tired of checking emails every day? Let the robot do it! 🤖*
-
-**Found this helpful? ⭐ Star the repo and share with your classmates!**
-
----
-
-### 💬 Questions? Issues? Ideas?
-[Open a GitHub Issue](https://github.com/muneeb-anjum0/Timetable-Wizard.git) • Made with ❤️ for the SZABIST community
-
-</div>
+Built with passion to solve real student problems and make university life a little bit easier.

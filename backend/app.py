@@ -76,6 +76,46 @@ def health_check():
             'timestamp': datetime.now().isoformat()
         }), 500
 
+@app.route('/api/oauth-config', methods=['GET'])
+def oauth_config_info():
+    """Diagnostic endpoint to show OAuth configuration"""
+    try:
+        # Show what redirect URI would be generated
+        origin = request.headers.get('Origin', '')
+        host = request.headers.get('Host', 'localhost:5000')
+        
+        if '192.168.' in origin:
+            redirect_host = origin.split('://')[1].split(':')[0] + ':5000'
+            redirect_uri = f'http://{redirect_host}/api/auth/gmail/callback'
+        else:
+            redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
+        
+        # Load and show current OAuth config
+        import os
+        client_secrets_file = os.path.join(os.path.dirname(__file__), 'credentials', 'client_secret.json')
+        
+        oauth_info = {
+            'current_redirect_uri': redirect_uri,
+            'request_origin': origin,
+            'request_host': host,
+            'client_secrets_exists': os.path.exists(client_secrets_file)
+        }
+        
+        if os.path.exists(client_secrets_file):
+            with open(client_secrets_file, 'r') as f:
+                import json
+                client_config = json.load(f)
+                oauth_info['configured_redirect_uris'] = client_config.get('installed', {}).get('redirect_uris', [])
+                oauth_info['client_id'] = client_config.get('installed', {}).get('client_id', 'Not found')
+        
+        return jsonify(oauth_info)
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
+
 @app.route('/api/auth/gmail', methods=['GET'])
 def gmail_auth():
     """Initiate Gmail OAuth flow"""
@@ -103,8 +143,14 @@ def gmail_auth():
                    'openid']
         )
         
-        # Set the redirect URI - always use localhost for OAuth (Google OAuth config)
-        flow.redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
+        # Always use localhost for OAuth redirects (Google OAuth requirement)
+        # This works even when accessing from network devices because OAuth happens in popup/redirect
+        redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
+        
+        flow.redirect_uri = redirect_uri
+        logger.info(f"Using OAuth redirect URI: {redirect_uri}")
+        logger.info(f"Request origin: {request.headers.get('Origin', 'None')}")
+        logger.info(f"Request host: {request.headers.get('Host', 'None')}")
         
         # Generate authorization URL
         authorization_url, state = flow.authorization_url(
@@ -146,8 +192,13 @@ def gmail_callback():
                    'https://www.googleapis.com/auth/userinfo.profile',
                    'openid']
         )
-        # Set redirect URI - always use localhost for OAuth (Google OAuth config)
-        flow.redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
+        # Always use localhost for OAuth redirects (Google OAuth requirement)
+        redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
+        
+        flow.redirect_uri = redirect_uri
+        logger.info(f"Using OAuth callback redirect URI: {redirect_uri}")
+        logger.info(f"Request origin: {request.headers.get('Origin', 'None')}")
+        logger.info(f"Request host: {request.headers.get('Host', 'None')}")
         
         # Get the authorization response
         authorization_response = request.url
@@ -172,12 +223,17 @@ def gmail_callback():
                     actual_scopes = query_params['scope'][0].split(' ')
                     logger.info(f"Actual scopes returned by Google: {actual_scopes}")
                     
-                    # Create new flow with actual scopes
+                    # Create new flow with actual scopes and dynamic redirect URI
                     flow = Flow.from_client_secrets_file(
                         client_secrets_file,
                         scopes=actual_scopes
                     )
-                    flow.redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
+                    
+                    # Always use localhost for OAuth redirects (Google OAuth requirement)
+                    redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
+                    
+                    flow.redirect_uri = redirect_uri
+                    logger.info(f"Using fallback OAuth callback redirect URI: {redirect_uri}")
                 
                 flow.fetch_token(authorization_response=authorization_response)
             else:
@@ -238,47 +294,78 @@ def gmail_callback():
         
         # Check referer header to determine frontend origin
         referer = request.headers.get('Referer', '')
+        user_agent = request.headers.get('User-Agent', '')
+        
         if '192.168.100.250' in referer:
             frontend_url = 'http://192.168.100.250:3000'
         elif 'localhost:3000' in referer or '127.0.0.1:3000' in referer:
             frontend_url = 'http://localhost:3000'
         
-        logger.info(f"Using frontend URL for OAuth callback: {frontend_url}")
+        # Check if this is a mobile browser (Safari, iOS, etc.)
+        is_mobile = any(mobile_agent in user_agent.lower() for mobile_agent in 
+                       ['mobile', 'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'opera mini'])
         
-        # Redirect to frontend with success - use universal messaging
-        return f"""
-        <html>
-        <body>
-        <script>
-        // Try to communicate with parent window using multiple target origins
-        const targetOrigins = [
-            'http://localhost:3000',
-            'http://127.0.0.1:3000', 
-            'http://192.168.100.250:3000'
-        ];
+        logger.info(f"OAuth callback - Frontend URL: {frontend_url}, Mobile: {is_mobile}, User-Agent: {user_agent}")
         
-        const message = {{
-            type: 'GMAIL_AUTH_SUCCESS',
-            user: {{
-                id: '{user['id']}',
-                email: '{user_email}'
-            }}
-        }};
-        
-        targetOrigins.forEach(origin => {{
-            try {{
-                window.opener.postMessage(message, origin);
-            }} catch (e) {{
-                console.log('Failed to post to:', origin, e);
-            }}
-        }});
-        
-        setTimeout(() => window.close(), 1000);
-        </script>
-        <p>Authentication successful! This window will close automatically.</p>
-        </body>
-        </html>
-        """
+        if is_mobile:
+            # For mobile browsers, redirect directly to frontend with auth data in URL
+            import urllib.parse
+            auth_data = urllib.parse.urlencode({
+                'auth': 'success',
+                'user_id': user['id'],
+                'email': user_email
+            })
+            redirect_url = f"{frontend_url}?{auth_data}"
+            logger.info(f"Mobile redirect to: {redirect_url}")
+            
+            return f"""
+            <html>
+            <head>
+                <meta http-equiv="refresh" content="0; url={redirect_url}">
+            </head>
+            <body>
+                <script>
+                    window.location.href = '{redirect_url}';
+                </script>
+                <p>Authentication successful! Redirecting...</p>
+            </body>
+            </html>
+            """
+        else:
+            # Desktop popup flow - use postMessage
+            return f"""
+            <html>
+            <body>
+            <script>
+            // Try to communicate with parent window using multiple target origins
+            const targetOrigins = [
+                'http://localhost:3000',
+                'http://127.0.0.1:3000', 
+                'http://192.168.100.250:3000'
+            ];
+            
+            const message = {{
+                type: 'GMAIL_AUTH_SUCCESS',
+                user: {{
+                    id: '{user['id']}',
+                    email: '{user_email}'
+                }}
+            }};
+            
+            targetOrigins.forEach(origin => {{
+                try {{
+                    window.opener.postMessage(message, origin);
+                }} catch (e) {{
+                    console.log('Failed to post to:', origin, e);
+                }}
+            }});
+            
+            setTimeout(() => window.close(), 1000);
+            </script>
+            <p>Authentication successful! This window will close automatically.</p>
+            </body>
+            </html>
+            """
         
     except Exception as e:
         logger.error(f"Gmail callback error: {e}")
@@ -288,16 +375,46 @@ def gmail_callback():
         
         # Check referer header to determine frontend origin
         referer = request.headers.get('Referer', '')
+        user_agent = request.headers.get('User-Agent', '')
+        
         if '192.168.100.250' in referer:
             frontend_url = 'http://192.168.100.250:3000'
         elif 'localhost:3000' in referer or '127.0.0.1:3000' in referer:
             frontend_url = 'http://localhost:3000'
         
-        logger.info(f"Using frontend URL for OAuth error callback: {frontend_url}")
+        # Check if this is a mobile browser
+        is_mobile = any(mobile_agent in user_agent.lower() for mobile_agent in 
+                       ['mobile', 'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'opera mini'])
         
-        return f"""
-        <html>
-        <body>
+        logger.info(f"OAuth error callback - Frontend URL: {frontend_url}, Mobile: {is_mobile}")
+        
+        if is_mobile:
+            # For mobile browsers, redirect to frontend with error
+            import urllib.parse
+            error_data = urllib.parse.urlencode({
+                'auth': 'error',
+                'error': str(e)
+            })
+            redirect_url = f"{frontend_url}?{error_data}"
+            
+            return f"""
+            <html>
+            <head>
+                <meta http-equiv="refresh" content="0; url={redirect_url}">
+            </head>
+            <body>
+                <script>
+                    window.location.href = '{redirect_url}';
+                </script>
+                <p>Authentication failed. Redirecting...</p>
+            </body>
+            </html>
+            """
+        else:
+            # Desktop popup flow
+            return f"""
+            <html>
+            <body>
         <script>
         // Try to communicate with parent window using multiple target origins
         const targetOrigins = [

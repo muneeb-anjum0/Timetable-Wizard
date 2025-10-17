@@ -186,3 +186,55 @@ code {
 .subtle-glow:hover {
   box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
 }
+
+/* Mobile-specific touch optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Mobile device styles - remove hover effects and improve touch */
+  .hover\:from-blue-50:hover {
+    --tw-gradient-from: rgb(239 246 255) !important;
+  }
+  
+  .hover\:to-indigo-50:hover {
+    --tw-gradient-to: rgb(238 242 255) !important;
+  }
+  
+  .hover\:border-blue-300:hover {
+    border-color: rgb(147 197 253) !important;
+  }
+  
+  .hover\:scale-105:hover {
+    transform: scale(1.05) !important;
+  }
+  
+  /* Ensure buttons are properly sized for touch */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Remove tap highlight on iOS */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Active states for touch devices */
+.active\:from-blue-100:active {
+  --tw-gradient-from: rgb(219 234 254) !important;
+}
+
+.active\:to-indigo-100:active {
+  --tw-gradient-to: rgb(224 231 255) !important;
+}
+
+.active\:border-blue-400:active {
+  border-color: rgb(96 165 250) !important;
+}
+
+.active\:scale-95:active {
+  transform: scale(0.95) !important;
+}
+
+.touch-manipulation {
+  touch-action: manipulation;
+}

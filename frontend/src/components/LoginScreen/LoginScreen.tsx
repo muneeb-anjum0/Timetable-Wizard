@@ -9,25 +9,42 @@ const LoginScreen: React.FC = () => {
   const { loginWithGmail } = useAuth();
 
   const handleGmailLogin = async () => {
+    console.log('[Mobile Debug] Login button clicked');
+    console.log('[Mobile Debug] User agent:', navigator.userAgent);
+    console.log('[Mobile Debug] Current URL:', window.location.href);
+    console.log('[Mobile Debug] Screen dimensions:', {
+      width: window.screen.width,
+      height: window.screen.height,
+      availWidth: window.screen.availWidth,
+      availHeight: window.screen.availHeight
+    });
+    
     setIsLoading(true);
     setError('');
     try {
+      console.log('[Mobile Debug] Starting Gmail login flow...');
       const success = await loginWithGmail();
+      console.log('[Mobile Debug] Login flow result:', success);
+      
       if (success) {
+        console.log('[Mobile Debug] Login successful, starting exit animation');
         // Start exit animation before actual redirect
         setIsExiting(true);
         // Let animation play for a bit before auth context handles the redirect
         setTimeout(() => {
           // The auth context will handle the redirect
+          console.log('[Mobile Debug] Exit animation complete');
         }, 300);
       } else {
+        console.error('[Mobile Debug] Login failed');
         setError('Gmail authentication failed. Please try again.');
       }
     } catch (error) {
+      console.error('[Mobile Debug] Login error caught:', error);
       setError('An error occurred during Gmail authentication. Please try again.');
-      console.error('Gmail login error:', error);
     } finally {
       if (!isExiting) {
+        console.log('[Mobile Debug] Setting loading to false');
         setIsLoading(false);
       }
     }
@@ -60,7 +77,8 @@ const LoginScreen: React.FC = () => {
           <button
             onClick={handleGmailLogin}
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-white to-gray-50 hover:from-blue-50 hover:to-indigo-50 disabled:from-gray-100 disabled:to-gray-200 disabled:cursor-not-allowed text-gray-900 font-semibold py-4 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center space-x-3 shadow-xl border-2 border-blue-200/50 hover:border-blue-300 hover:scale-105 hover:shadow-2xl animate-drop-bounce delay-300 group"
+            className="w-full bg-gradient-to-r from-white to-gray-50 hover:from-blue-50 hover:to-indigo-50 active:from-blue-100 active:to-indigo-100 disabled:from-gray-100 disabled:to-gray-200 disabled:cursor-not-allowed text-gray-900 font-semibold py-4 px-6 rounded-2xl transition-all duration-300 flex items-center justify-center space-x-3 shadow-xl border-2 border-blue-200/50 hover:border-blue-300 active:border-blue-400 hover:scale-105 active:scale-95 hover:shadow-2xl animate-drop-bounce delay-300 group touch-manipulation"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
             {isLoading ? (
               <>
@@ -78,7 +96,14 @@ const LoginScreen: React.FC = () => {
           {error && (
             <div className="flex items-center space-x-2 text-red-700 bg-gradient-to-r from-red-50 to-pink-50 p-4 rounded-2xl mt-6 border-2 border-red-200/50 backdrop-blur-sm animate-fade-in shadow-lg">
               <AlertCircle className="w-5 h-5 animate-pulse" />
-              <span className="text-sm font-medium">{error}</span>
+              <div className="flex-1">
+                <span className="text-sm font-medium">{error}</span>
+                {error.includes('Popup blocked') && (
+                  <div className="mt-2 text-xs text-red-600">
+                    On mobile? Try refreshing and tapping the login button again. The page will redirect to complete authentication.
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

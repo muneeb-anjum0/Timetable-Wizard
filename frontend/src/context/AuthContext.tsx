@@ -34,6 +34,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check for OAuth callback parameters (mobile redirect flow)
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.get('auth') === 'success' && urlParams.get('user_id') && urlParams.get('email')) {
+      console.log('[Safari Mobile Debug] OAuth success detected in URL params');
+      const userData = {
+        id: urlParams.get('user_id')!,
+        email: urlParams.get('email')!
+      };
+      
+      console.log('[Safari Mobile Debug] Setting user from URL params:', userData);
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Clean up URL parameters
+      const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      
+      setLoading(false);
+      return;
+    }
+    
+    if (urlParams.get('auth') === 'error') {
+      console.error('[Safari Mobile Debug] OAuth error detected in URL params:', urlParams.get('error'));
+      // Clean up URL parameters
+      const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      
+      setLoading(false);
+      return;
+    }
+    
     // Check for stored user session
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -47,6 +79,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Listen for Gmail OAuth callback
     const handleGmailAuthMessage = (event: MessageEvent) => {
+      console.log('[Mobile Debug] Received message event:', {
+        origin: event.origin,
+        data: event.data,
+        source: event.source,
+        currentOrigin: window.location.origin,
+        timestamp: new Date().toISOString()
+      });
+      
       // Allow messages from any localhost port (for OAuth callback)
       const allowedOrigins = [
         'http://localhost:5000',
@@ -55,36 +95,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       ];
       
       // Be more permissive for OAuth callbacks since they come from localhost:5000
-      if (!event.origin.startsWith('http://localhost:') && 
-          !event.origin.startsWith('http://127.0.0.1:') && 
-          !event.origin.startsWith('http://192.168.100.250:')) {
-        console.log('Ignoring message from unauthorized origin:', event.origin);
+      // Also allow messages from network IPs for mobile devices
+      const isAllowedOrigin = event.origin.startsWith('http://localhost:') || 
+                             event.origin.startsWith('http://127.0.0.1:') || 
+                             event.origin.startsWith('http://192.168.');
+      
+      if (!isAllowedOrigin) {
+        console.log('[Mobile Debug] Ignoring message from unauthorized origin:', event.origin);
         return;
       }
       
-      console.log('Received OAuth message from:', event.origin, event.data);
-      
-      console.log('Received message from popup:', event.data);
+      console.log('[Mobile Debug] Processing authorized message from:', event.origin);
+      console.log('[Mobile Debug] Message data:', event.data);
       
       if (event.data.type === 'GMAIL_AUTH_SUCCESS') {
         const userData = event.data.user;
-        console.log('Gmail auth successful, setting user:', userData);
+        console.log('[Mobile Debug] Gmail auth successful, setting user:', userData);
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
         setLoading(false);
       } else if (event.data.type === 'GMAIL_AUTH_ERROR') {
         const errorMsg = event.data.error;
-        console.error('Gmail auth error:', errorMsg);
+        console.error('[Mobile Debug] Gmail auth error:', errorMsg);
         
         // Handle specific scope errors more gracefully
         if (errorMsg && errorMsg.includes('Scope has changed')) {
-          console.log('Scope mismatch detected - this is usually harmless, retrying...');
+          console.log('[Mobile Debug] Scope mismatch detected - this is usually harmless, retrying...');
           // Don't show error to user, just set loading to false
           setLoading(false);
         } else {
-          console.error('Other Gmail auth error:', errorMsg);
+          console.error('[Mobile Debug] Other Gmail auth error:', errorMsg);
           setLoading(false);
         }
+      } else {
+        console.log('[Mobile Debug] Unknown message type:', event.data.type);
       }
     };
     
@@ -101,19 +145,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true);
       console.log('Starting Gmail OAuth flow...');
       
+      // Detect mobile device
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      console.log('Is mobile device:', isMobile);
+      console.log('User agent:', navigator.userAgent);
+      console.log('Current origin:', window.location.origin);
+      
       const authData = await apiService.getGmailAuthUrl();
       console.log('Got auth URL:', authData.auth_url);
       
-      // Open popup window for OAuth
+      // Try popup first, but have fallback for mobile
       const popup = window.open(
         authData.auth_url,
         'gmail-auth',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
       
-      if (!popup) {
-        throw new Error('Popup blocked. Please allow popups for this site.');
+      if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+        console.warn('Popup blocked or failed to open, redirecting to full page auth...');
+        
+        if (isMobile) {
+          // For mobile, redirect to auth URL in the same window
+          console.log('Mobile detected: redirecting to auth URL in same window');
+          window.location.href = authData.auth_url;
+          return true;
+        } else {
+          throw new Error('Popup blocked. Please allow popups for this site or try on mobile.');
+        }
       }
+      
+      console.log('Popup opened successfully, waiting for auth completion...');
+      
+      // Monitor popup closure
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          console.log('Popup was closed by user');
+          clearInterval(checkClosed);
+          setLoading(false);
+        }
+      }, 1000);
+      
+      // Clean up interval after 5 minutes
+      setTimeout(() => {
+        clearInterval(checkClosed);
+      }, 300000);
       
       // The popup will send a message when auth is complete
       return true;
