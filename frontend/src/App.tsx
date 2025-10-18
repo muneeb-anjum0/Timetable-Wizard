@@ -33,6 +33,58 @@ function AppContent() {
   // Computed state
   const noSemestersConfigured = config && (!config.semester_filter || config.semester_filter.length === 0);
 
+  // Helper function to filter timetable items based on configured semesters
+  const getFilteredTimetableItems = () => {
+    if (!timetableData?.items || !config?.semester_filter || config.semester_filter.length === 0) {
+      return timetableData?.items || [];
+    }
+
+    const filteredItems = timetableData.items.filter(item => {
+      if (!item.semester) return false;
+      
+      const itemSemester = item.semester.trim();
+      
+      return config.semester_filter.some(configSemester => {
+        const configSemesterTrimmed = configSemester.trim();
+        
+        // Direct match
+        if (itemSemester === configSemesterTrimmed) return true;
+        
+        // Enhanced flexible matching for different formats
+        const normalizeForComparison = (str: string) => {
+          return str
+            .replace(/\s+/g, ' ')  // Multiple spaces to single space
+            .replace(/\s*\(\s*/g, '(')  // Remove spaces around opening parentheses
+            .replace(/\s*\)\s*/g, ')')  // Remove spaces around closing parentheses
+            .replace(/\s*-\s*/g, ' - ')  // Normalize dashes with consistent spacing
+            .trim()
+            .toLowerCase();
+        };
+        
+        const normalizedItem = normalizeForComparison(itemSemester);
+        const normalizedConfig = normalizeForComparison(configSemesterTrimmed);
+        
+        console.debug(`🔍 Comparing: "${normalizedItem}" vs "${normalizedConfig}"`);
+        
+        return normalizedItem === normalizedConfig;
+      });
+    });
+
+    // Deduplicate items - remove duplicates based on key combination of semester, course_code, course_title, faculty, time, room
+    const deduplicatedItems = filteredItems.filter((item, index, arr) => {
+      const itemKey = `${item.semester}|${item.course_code}|${item.course_title}|${item.faculty}|${item.time}|${item.room}`;
+      const firstIndex = arr.findIndex(otherItem => {
+        const otherKey = `${otherItem.semester}|${otherItem.course_code}|${otherItem.course_title}|${otherItem.faculty}|${otherItem.time}|${otherItem.room}`;
+        return otherKey === itemKey;
+      });
+      return firstIndex === index; // Keep only the first occurrence
+    });
+
+    console.debug(`🔄 Filtered ${timetableData.items.length} -> ${filteredItems.length} -> ${deduplicatedItems.length} items (after filtering and deduplication)`);
+    
+    return deduplicatedItems;
+  };
+
   // Load initial data on component mount (must be called before early returns)
   useEffect(() => {
     if (isAuthenticated) {
@@ -276,7 +328,7 @@ function AppContent() {
               </div>
               <div className="flex items-center bg-gradient-to-r from-blue-50 to-indigo-50 rounded-full px-4 py-2 shadow-sm border border-blue-100 transition-all duration-200 hover:shadow-md hover:scale-105 animate-drop-bounce-fast delay-100">
                 <span className="text-xs sm:text-sm text-blue-700 font-semibold">Welcome</span>
-                <span className="mx-2 text-xs sm:text-sm font-mono text-blue-900 bg-white/70 px-2 py-1 rounded-full">{user?.email}</span>
+                <span className="mx-2 text-xs sm:text-sm font-sans text-blue-900 bg-white/70 px-2 py-1 rounded-full">{user?.email}</span>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
@@ -365,7 +417,11 @@ function AppContent() {
           {config && (
             <div>
               {timetableData && !isScraperRunning ? (
-                <SummaryStats data={timetableData} config={config || undefined} />
+                <SummaryStats 
+                  data={timetableData} 
+                  config={config || undefined} 
+                  filteredItems={getFilteredTimetableItems()}
+                />
               ) : (
                 // Show placeholder stats when no semesters configured
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -489,14 +545,14 @@ function AppContent() {
                     <div className="flex items-center gap-1 bg-blue-100 rounded-full px-3 py-1 border border-blue-200">
                       <img src="/pulse.svg" alt="Pulse" className="h-4 w-4 text-blue-500" />
                       <span className="text-sm text-blue-700 font-medium">
-                        {timetableData?.items?.length || 0} classes
+                        {getFilteredTimetableItems().length} classes
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
               <div className="p-0 timetable-container">
-                <TimetableTable items={timetableData.items} />
+                <TimetableTable items={getFilteredTimetableItems()} />
               </div>
             </div>
           )}

@@ -790,6 +790,9 @@ def _extract_faculty_szabist(line: str, course_match, credit_match) -> Optional[
         # This handles cases like "Lab 01", "Digital Lab", "301", "NB-208", "Hall 01 A", "TBD", "Online", "Cancelled", etc.
         cleaned = re.sub(r'\b(?:Lab\s*\d+|Digital\s*Lab|\d{3}|NB-\d+|OB-\d+|Hall\s*\d+\s*[A-Z]?|TV\s*Studio|Media\s*Lab|TBD|Online|Cancelled|Canceled)\s*$', '', cleaned, flags=re.IGNORECASE).strip()
         
+        # Remove trailing punctuation and clean up the text
+        cleaned = re.sub(r'[^\w\s]+$', '', cleaned).strip()
+        
         # Now we should have: [Course Title] [Faculty Name]
         # Strategy: Look for common course title patterns and faculty name patterns
         words = cleaned.split()
@@ -802,7 +805,9 @@ def _extract_faculty_szabist(line: str, course_match, credit_match) -> Optional[
                           'databases', 'security', 'computing', 'science', 'mathematics', 'calculus',
                           'physics', 'chemistry', 'english', 'composition', 'comprehension', 'lab',
                           'laboratory', 'human', 'resource', 'business', 'process', 'interaction',
-                          'interface', 'software', 'computer', 'data', 'information', 'technology'}
+                          'interface', 'software', 'computer', 'data', 'information', 'technology',
+                          'project', 'governance', 'monitoring', 'evaluation', 'organizational',
+                          'cost', 'financial', 'risk', 'for', 'of', 'in', 'the', 'with', 'to'}
             
             # Find where the title likely ends and faculty begins
             # Look for the first sequence of capitalized words that aren't title words
@@ -813,17 +818,52 @@ def _extract_faculty_szabist(line: str, course_match, credit_match) -> Optional[
             for start_idx in range(max(0, len(words) - 3), len(words)):
                 candidate_faculty = words[start_idx:]
                 
-                # Check if all words look like names (capitalized, alphabetic)
-                if all(word[0].isupper() and word.isalpha() for word in candidate_faculty):
-                    # Check if any of these words are common title words
-                    if not any(word.lower() in title_words for word in candidate_faculty):
+                # Filter to get clean name-like words
+                clean_words = []
+                for word in candidate_faculty:
+                    clean_word = word.rstrip('.,')  # Remove trailing punctuation
+                    if (clean_word.isalpha() or 
+                        clean_word.lower() in ['dr.', 'prof.', 'mr.', 'ms.', 'mrs.'] or
+                        clean_word.rstrip('.').lower() in ['dr', 'prof', 'mr', 'ms', 'mrs']):
+                        clean_words.append(clean_word)
+                
+                if not clean_words:
+                    continue
+                
+                # Check if any word is a title word (course-related)
+                has_title_words = any(word.lower() in title_words for word in clean_words)
+                
+                if not has_title_words:
+                    # Check if words look like names
+                    looks_like_names = True
+                    for i, word in enumerate(clean_words):
+                        word_lower = word.rstrip('.').lower()
+                        if word_lower in ['dr', 'prof', 'mr', 'ms', 'mrs']:
+                            continue  # Titles are fine
+                        elif word[0].isupper():
+                            continue  # Proper nouns are fine  
+                        elif i > 0 and word.islower():
+                            continue  # Lowercase surnames after first word are fine
+                        else:
+                            looks_like_names = False
+                            break
+                    
+                    if looks_like_names:
                         faculty_start_idx = start_idx
                         break
             
             if faculty_start_idx >= 0:
                 faculty_words = words[faculty_start_idx:]
-                if faculty_words:
-                    return ' '.join(word.title() for word in faculty_words)
+                # Include titles and alphabetic words for the final result
+                final_faculty = []
+                for word in faculty_words:
+                    if (word.isalpha() or 
+                        word.lower() in ['dr.', 'prof.', 'mr.', 'ms.', 'mrs.'] or
+                        word.rstrip('.').lower() in ['dr', 'prof', 'mr', 'ms', 'mrs']):
+                        final_faculty.append(word)
+                
+                if final_faculty:
+                    return ' '.join(word.title() for word in final_faculty)
     
     return None
 

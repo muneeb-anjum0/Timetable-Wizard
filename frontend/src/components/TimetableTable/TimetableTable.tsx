@@ -12,6 +12,10 @@ interface TimetableTableProps {
   items: TimetableItem[];
 }
 
+// Debug logging cache to reduce console spam
+let loggedTimes = new Set<string>();
+let loggedSemesters = new Set<string>();
+
 // Helper function to parse time and convert to minutes for sorting
 const parseTimeToMinutes = (timeStr: string): number => {
   if (!timeStr || timeStr === '-' || timeStr === 'null') return 0;
@@ -34,8 +38,11 @@ const parseTimeToMinutes = (timeStr: string): number => {
   
   const totalMinutes = hours * 60 + minutes;
   
-  // Debug logging to help troubleshoot
-  console.log(`Time parsing: "${timeStr}" -> ${hours}:${minutes.toString().padStart(2, '0')} (${totalMinutes} minutes)`);
+  // Reduce debug logging frequency - only log unique time strings
+  if (!loggedTimes.has(timeStr)) {
+    loggedTimes.add(timeStr);
+    console.log(`Time parsing: "${timeStr}" -> ${hours}:${minutes.toString().padStart(2, '0')} (${totalMinutes} minutes)`);
+  }
   
   return totalMinutes;
 };
@@ -121,8 +128,33 @@ const getDisplayCourseTitle = (item: TimetableItem): string => {
   return generateTitle(item);
 };
 
+// Helper function to check if a row should be highlighted as cancelled
+const shouldHighlightRow = (item: TimetableItem): boolean => {
+  const displayedTexts = [
+    getDisplayCourseTitle(item),
+    getDisplayFaculty(item),
+    getDisplayRoom(item),
+    getDisplayTime(item),
+    getDisplayCampus(item),
+    item.semester || ''
+  ];
+  return displayedTexts.some(text => text.toLowerCase().includes('cancelled'));
+};
+
+// Helper function to render text with red color if it contains 'cancelled'
+const renderText = (text: string): React.ReactNode => {
+  if (text.toLowerCase().includes('cancelled')) {
+    return <span className="text-red-600 font-bold">{text}</span>;
+  }
+  return text;
+};
+
 // Helper function to group and sort data
 const groupAndSortData = (items: TimetableItem[]) => {
+  // Reset debug logging cache for new data
+  loggedTimes.clear();
+  loggedSemesters.clear();
+
   // Group by semester
   const grouped = items.reduce((acc, item) => {
     const semester = item.semester || 'Unknown';
@@ -149,13 +181,16 @@ const groupAndSortData = (items: TimetableItem[]) => {
       return timeA - timeB;
     });
     
-    // Debug: Log the sorted order for this semester
-    console.log(`Semester "${semester}" sorted order:`);
-    grouped[semester].forEach((item, index) => {
-      const displayTime = getDisplayTime(item);
-      const timeMinutes = parseTimeToMinutes(displayTime);
-      console.log(`  ${index + 1}. ${item.course} - ${displayTime} (${timeMinutes} minutes)`);
-    });
+    // Debug: Log the sorted order for this semester (only once per render)
+    if (!loggedSemesters.has(semester)) {
+      loggedSemesters.add(semester);
+      console.log(`Semester "${semester}" sorted order:`);
+      grouped[semester].forEach((item, index) => {
+        const displayTime = getDisplayTime(item);
+        const timeMinutes = parseTimeToMinutes(displayTime);
+        console.log(`  ${index + 1}. ${item.course} - ${displayTime} (${timeMinutes} minutes)`);
+      });
+    }
   });
 
   // Sort semesters alphabetically
@@ -227,15 +262,15 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
               {/* Mobile Class Cards */}
               <div className="divide-y divide-gray-100">
                 {grouped[semester].map((item, itemIndex) => (
-                  <div key={`${semester}-${itemIndex}`} className="p-4 rounded-md border border-gray-50 mb-2 bg-white hover:bg-blue-50 transition-all duration-300 hover:shadow-md hover:scale-105 animate-drop-subtle" style={{animationDelay: `${500 + (semesterIndex * 75) + (itemIndex * 30)}ms`}}>
+                  <div key={`${semester}-${itemIndex}`} className={`p-4 rounded-md border border-gray-50 mb-2 bg-white hover:bg-blue-50 transition-all duration-300 hover:shadow-md hover:scale-105 animate-drop-subtle${shouldHighlightRow(item) ? ' bg-red-50' : ''}`} style={{animationDelay: `${500 + (semesterIndex * 75) + (itemIndex * 30)}ms`}}>
                     <div className="space-y-2">
                       <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-medium text-gray-900 truncate">
-                            {item.course || '-'}
+                            {renderText(item.course || '-')}
                           </h4>
                           <p className="text-xs text-gray-600 mt-1 break-words">
-                            {getDisplayCourseTitle(item)}
+                            {renderText(getDisplayCourseTitle(item))}
                           </p>
                         </div>
                         <div className="ml-2 flex-shrink-0">
@@ -247,7 +282,7 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
                                 ? "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 border border-green-300 text-green-800" 
                                 : "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
                               }>
-                                {roomDisplay}
+                                {renderText(roomDisplay)}
                               </span>
                             );
                           })()}
@@ -257,15 +292,15 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
                       <div className="flex flex-wrap gap-2 text-xs text-gray-500">
                         <div className="flex items-center">
                           <span className="mr-1">👨‍🏫</span>
-                          <span>{getDisplayFaculty(item)}</span>
+                          <span>{renderText(getDisplayFaculty(item))}</span>
                         </div>
                         <div className="flex items-center">
                           <span className="mr-1">⏰</span>
-                          <span>{getDisplayTime(item)}</span>
+                          <span>{renderText(getDisplayTime(item))}</span>
                         </div>
                         <div className="flex items-center">
                           <span className="mr-1">🏫</span>
-                          <span className="truncate">{getDisplayCampus(item)}</span>
+                          <span className="truncate">{renderText(getDisplayCampus(item))}</span>
                         </div>
                       </div>
                     </div>
@@ -318,35 +353,32 @@ const TimetableTable: React.FC<TimetableTableProps> = ({ items }) => {
                 </tr>
                 {/* Desktop Classes for this semester */}
                 {grouped[semester].map((item, itemIndex) => (
-                  <tr key={`${semester}-${itemIndex}`} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 hover:shadow-lg border-b border-gray-100 animate-drop-subtle" style={{animationDelay: `${550 + (semesterIndex * 75) + (itemIndex * 25)}ms`}}>
+                  <tr key={`${semester}-${itemIndex}`} className={`hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-300 hover:shadow-lg border-b border-gray-100 animate-drop-subtle${shouldHighlightRow(item) ? ' bg-red-100' : ''}`} style={{animationDelay: `${550 + (semesterIndex * 75) + (itemIndex * 25)}ms`}}>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      <span className="text-purple-700 font-bold bg-gradient-to-r from-purple-100 to-pink-100 px-2 py-1 rounded-lg border border-purple-300 text-xs">{item.semester || '-'}</span>
+                      <span className="text-purple-700 font-bold bg-gradient-to-r from-purple-100 to-pink-100 px-2 py-1 rounded-lg border border-purple-300 text-xs">{renderText(item.semester || '-')}</span>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      <div className="break-words leading-5 text-gray-800 font-medium">{getDisplayCourseTitle(item)}</div>
+                      <div className="break-words leading-5 text-gray-800 font-medium">{renderText(getDisplayCourseTitle(item))}</div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      <span className="text-gray-700 font-medium">{getDisplayFaculty(item)}</span>
+                      <span className="text-gray-700 font-medium">{renderText(getDisplayFaculty(item))}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                       {(() => {
                         const roomDisplay = getDisplayRoom(item);
                         const isOnline = roomDisplay.toLowerCase() === 'online';
                         return (
-                          <span className={isOnline 
-                            ? "bg-gradient-to-r from-green-100 to-emerald-100 border border-green-300 rounded-lg px-2 py-1 text-xs text-green-800 font-bold" 
-                            : "bg-gradient-to-r from-gray-100 to-slate-100 border border-gray-300 rounded-lg px-2 py-1 text-xs text-gray-800 font-bold"
-                          }>
-                            {roomDisplay}
+                          <span className={`bg-gradient-to-r ${isOnline ? 'from-green-100 to-emerald-100 border-green-300' : 'from-gray-100 to-slate-100 border-gray-300'} border rounded-lg px-2 py-1 text-xs font-bold ${shouldHighlightRow(item) ? 'text-red-800' : isOnline ? 'text-green-800' : 'text-gray-800'}`}>
+                            {renderText(roomDisplay)}
                           </span>
                         );
                       })()}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      <span className="text-blue-800 font-bold bg-gradient-to-r from-blue-100 to-indigo-100 px-2 py-1 rounded-lg text-xs tracking-wider border border-blue-300">{getDisplayTime(item)}</span>
+                      <span className="text-blue-800 font-bold bg-gradient-to-r from-blue-100 to-indigo-100 px-2 py-1 rounded-lg text-xs tracking-wider border border-blue-300">{renderText(getDisplayTime(item))}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      <span className="text-gray-700 font-medium bg-gray-100 px-2 py-1 rounded-lg border border-gray-300 text-xs">{getDisplayCampus(item)}</span>
+                      <span className="text-gray-700 font-medium bg-gray-100 px-2 py-1 rounded-lg border border-gray-300 text-xs">{renderText(getDisplayCampus(item))}</span>
                     </td>
                   </tr>
                 ))}

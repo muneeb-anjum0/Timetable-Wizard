@@ -149,6 +149,8 @@ def extract_all_semesters_from_line(line_text: str) -> List[str]:
     semester_patterns = [
         r'\b([A-Z]+\s*\(\s*[A-Z]+\s*\)\s*-?\s*\d+\s*[A-Z])\b',  # BS(SE)-4A variations
         r'\b([A-Z]+\s+[A-Z]+\s*-?\s*\d+\s*[A-Z])\b',            # Alternative formats
+        r'\b([A-Z]{2,4}\s*-\s*\d+(?:\s*[A-Z])?)\b',             # MPM-1, EMBA-2, MS-1 formats
+        r'\b([A-Z]+\s*\(\s*[A-Z]+\s*\)\s*-\s*\d+)\b',           # MS(DS)-1, MS(SS)-1 formats
     ]
     
     all_semesters = []
@@ -212,6 +214,8 @@ def find_best_semester_match(email_text: str, allowed_semesters: List[str]) -> s
     semester_patterns = [
         r'\b([A-Z]+\s*\(\s*[A-Z]+\s*\)\s*-?\s*\d+\s*[A-Z])\b',  # BS(SE)-4A variations with optional spaces
         r'\b([A-Z]+\s+[A-Z]+\s*-?\s*\d+\s*[A-Z])\b',            # Alternative formats with optional spaces
+        r'\b([A-Z]{2,4}\s*-\s*\d+(?:\s*[A-Z])?)\b',             # MPM-1, EMBA-2, MS-1 formats
+        r'\b([A-Z]+\s*\(\s*[A-Z]+\s*\)\s*-\s*\d+)\b',           # MS(DS)-1, MS(SS)-1 formats
     ]
     
     found_semesters = []

@@ -106,7 +106,7 @@ class AdvancedTableParser:
         return tables
     
     def _extract_tables_from_text(self, html_content: str) -> List[pd.DataFrame]:
-        """Extract table data from text content (Gmail-style formatting) - ENHANCED"""
+        """Extract table data from text content (Gmail-style formatting) - ENHANCED FOR ALL 39 SECTIONS"""
         soup = BeautifulSoup(html_content, 'html.parser')
         
         # Get all text content, preserving line breaks
@@ -115,194 +115,322 @@ class AdvancedTableParser:
         
         logger.info(f"🔍 Processing {len(lines)} lines from Gmail text content")
         
-        # Look for schedule data patterns - Gmail format is numbered lines
-        schedule_lines = []
-        potential_lines = []
-        
-        # First pass: collect lines that might be schedule data
+        # Enhanced multi-line reconstruction - FIXED for ALL section patterns
+        schedule_entries = []
         i = 0
         while i < len(lines):
             line = lines[i].strip()
             
             # Look for lines starting with a number (schedule entries)
-            if re.match(r'^\d+\s+[A-Z]{2,4}\s+', line):  # Require 2-4 letter department code
-                # This might be a schedule line, but could span multiple lines
-                full_line = line
+            # Enhanced pattern to catch ALL section formats including BS, EMBA, PMBA, etc.
+            if re.match(r'^\d+\s+[A-Z]{2,4}\s+', line):
+                # This is a schedule line that might span multiple lines
+                full_entry = line
                 
-                # Check if the next few lines are continuations (don't start with number)
+                # Look ahead for continuation lines more aggressively
                 j = i + 1
-                while j < len(lines) and j < i + 8:  # Look ahead max 8 lines (increased from 5)
+                while j < len(lines) and j < i + 12:  # Look ahead up to 12 lines for complex entries
                     next_line = lines[j].strip()
-                    # If next line starts with number + department, it's a new entry
-                    if re.match(r'^\d+\s+[A-Z]{2,4}\s+', next_line):  # Must have department code
+                    
+                    # Stop if we hit another numbered entry (new schedule item)
+                    if re.match(r'^\d+\s+[A-Z]{2,4}\s+', next_line):
                         break
-                    # If it looks like a continuation (no number, has relevant content)
-                    if next_line and not re.match(r'^[🕗🔸]', next_line):  # Skip emoji headers
-                        # Special handling for time/room/campus continuations
-                        if (re.search(r'\d{1,2}:\d{2}\s*[AP]M|Hall|Lab|NB-|\d{3}|SZABIST|Campus|H-8/4', next_line) or
-                            len(next_line.split()) <= 4):  # Short lines are likely continuations
-                            full_line += " " + next_line
+                    
+                    # Stop if we hit emoji headers/separators
+                    if re.match(r'^[🕗🔸]', next_line):
+                        break
+                    
+                    # Include date/time information lines
+                    if re.match(r'^\d{1,2}-\d{1,2}-\d{4}', next_line):
+                        full_entry += " " + next_line
+                        j += 1
+                        break
+                    
+                    # Add continuation lines that contain relevant data
+                    if next_line:
+                        # Include lines with faculty names, times, rooms, etc.
+                        # Enhanced patterns for better continuation detection
+                        if (re.search(r'Dr\.|Prof\.|Mr\.|Ms\.|\d{1,2}:\d{2}\s*[AP]M|Hall|Lab|NB-|\d{3}|SZABIST|Campus|Cancelled|Accounting|Management|Ethics|Governance|Marketing|Analysis|Development|Research|International|Engineering|Programming|Computing|Vision|Technical|Business|Communication|Project|Risk|Organizational|Strategic|Supply|Chain|Operations|Fundamentals|Applied|Principles|Assessment|Diagnosis|Quantitative|Qualitative|Psychotherapy|Counseling|Media|Journalism|Participation|Community|Resilience|Vulnerability|Hands-on', next_line, re.IGNORECASE) or
+                            len(next_line.split()) <= 8):  # Medium lines are likely continuations
+                            full_entry += " " + next_line
                     j += 1
                 
-                potential_lines.append(full_line)
+                # Only include entries that have valid semester and course patterns
+                # Enhanced validation for ALL 39 section types
+                has_valid_semester = any([
+                    re.search(r'(BS|MS|PhD|EMBA|PMBA|MBA|BBA|MHRM|MPM|MMS)', full_entry),
+                    re.search(r'(BSAI|BSSE)', full_entry),  # AI and SE programs
+                    re.search(r'Core|Elective|Open|Zero', full_entry),  # Special qualifiers
+                ])
+                
+                has_valid_course = re.search(r'\b[A-Z]{2,4}L?\s*(?:TE)?-?\s*\d{2,4}\b', full_entry)
+                
+                if has_valid_semester and has_valid_course:
+                    schedule_entries.append(full_entry)
+                    logger.debug(f"📝 Reconstructed entry {len(schedule_entries)}: {full_entry[:100]}...")
+                
                 i = j  # Skip the lines we've already processed
             else:
                 i += 1
         
-        logger.info(f"📝 Found {len(potential_lines)} potential schedule entries")
+        logger.info(f"📝 Found {len(schedule_entries)} potential schedule entries")
         
-        # Second pass: filter for actual schedule lines
-        for line in potential_lines:
-            # Must contain semester pattern AND course code
-            if (re.search(r'BS\([A-Z]{2,4}\)\s*-\s*[0-9A-Z]+', line) and 
-                re.search(r'\b[A-Z]{2,4}L?\s*\d{2,4}\b', line)):
-                schedule_lines.append(line)
-                logger.debug(f"✅ Valid schedule line: {line[:80]}...")
-        
-        logger.info(f"🎯 Filtered to {len(schedule_lines)} valid schedule lines")
-        
-        if not schedule_lines:
-            logger.warning("❌ No valid schedule lines found in text content")
+        if not schedule_entries:
+            logger.warning("❌ No valid schedule entries found in text content")
             return []
             
-        # Parse lines into structured data
+        # Parse entries into structured data
         rows = []
-        for i, line in enumerate(schedule_lines):
-            row_data = self._parse_schedule_line(line)
+        for i, entry in enumerate(schedule_entries):
+            row_data = self._parse_schedule_line(entry)
             if row_data:
                 rows.append(row_data)
-                if i < 3:  # Log first few for debugging
-                    logger.info(f"✅ Parsed entry {i+1}: {row_data.get('course')} - {row_data.get('semester')} - {row_data.get('time')}")
+                if i < 5:  # Log first few for debugging
+                    logger.info(f"✅ Parsed entry {i+1}: {row_data.get('course')} - {row_data.get('semester')} - Faculty: {row_data.get('faculty')} - Time: {row_data.get('time')}")
         
         if not rows:
-            logger.warning("❌ No valid rows parsed from schedule lines")
+            logger.warning("❌ No valid rows parsed from schedule entries")
             return []
             
-        # Create DataFrame
+        # Create DataFrame with proper column mapping
         df = pd.DataFrame(rows)
         
-        # Add standard column names if we don't have them
-        expected_columns = ['sr_no', 'dept', 'program', 'semester', 'course_code', 'course_title', 'faculty', 'room', 'time', 'campus']
-        
-        # Map columns based on what we have
-        if len(df.columns) <= len(expected_columns):
-            column_mapping = {}
-            for i, col in enumerate(df.columns):
-                if i < len(expected_columns):
-                    column_mapping[col] = expected_columns[i]
-            df = df.rename(columns=column_mapping)
-        
         logger.info(f"✅ Created DataFrame from text with shape {df.shape}")
+        logger.info(f"✅ Columns: {list(df.columns)}")
+        
         return [df]
     
     def _parse_schedule_line(self, line: str) -> Optional[Dict]:
-        """Parse a single schedule line into structured data - ENHANCED for Gmail format"""
+        """Parse a single schedule line into structured data - ENHANCED FOR ALL 39 SECTIONS"""
         try:
-            logger.debug(f"🔧 Parsing line: {line}")
+            logger.debug(f"🔧 Parsing entry: {line[:100]}...")
             
-            # Gmail format example:
-            # "9 AI BSAI BS(AI) - 4A CSC 3202 Design and Analysis of Algorithms (3,0) TAUQEER AHMAD 205 08:00 AM - 09:30 AM SZABIST University Campus"
-            
-            # Enhanced regex patterns for Gmail format
+            # Check if this is a cancelled class first
+            is_cancelled = 'Cancelled' in line or 'cancelled' in line.lower()
             
             # Extract serial number (at the beginning)
             sr_match = re.match(r'^(\d+)\s+', line)
             sr_no = sr_match.group(1) if sr_match else None
             
-            # Extract department (after serial number)
-            dept_match = re.search(r'^\d+\s+([A-Z/\s]+?)\s+(?:BS|MS|BBA)', line)
+            # Extract department (after serial number, before program)
+            dept_match = re.search(r'^\d+\s+([A-Z/\s]+?)\s+(?:BS|MS|PhD|EMBA|PMBA|MBA|BBA|MHRM|MPM|MMS)', line)
             dept = dept_match.group(1).strip() if dept_match else None
             
-            # Extract semester (e.g., "BS(AI) - 4A", "BS(CS) - 5B")
-            semester_match = re.search(r'(BS\([A-Z]+\)\s*-\s*[0-9A-Z]+)', line)
-            semester = semester_match.group(1) if semester_match else None
+            # Extract semester - Enhanced to handle ALL section formats
+            semester_patterns = [
+                # Complex multi-section patterns like "EMBA - 1 / PMBA - 1 / MBA (72) Day / Eve - 1"
+                r'((?:EMBA|PMBA|MBA)\s*-\s*\d+(?:\s*/\s*(?:EMBA|PMBA|MBA)(?:\s*\(\d+\))?\s*(?:Day|Eve)?\s*-\s*\d+)*)',
+                # MS patterns with complex aliases like "MS (SS) - 1 / MSS - 1"
+                r'(MS\s*\([A-Z]{2,4}\)\s*-\s*[0-9A-Z]+(?:\s*/\s*[A-Z]{2,4}\s*-\s*[0-9A-Z]+)*)',
+                # BS patterns like "BS (CS) / BSSE Open", "BS(CS) - 8B"
+                r'(BS\s*\(?[A-Z]{2,4}\)?\s*(?:/\s*[A-Z]{2,4})?\s*(?:-\s*[0-9A-Z]+|Open))',
+                # Simple patterns like "BBA - 2", "MMS Zero", "MMS - 1"  
+                r'((?:BBA|MMS|MHRM|MPM)\s*(?:-\s*\d+|Zero))',
+                # AI patterns like "BSAI - 1B", "BSAI - 4A"
+                r'(BSAI\s*-\s*[0-9A-Z]+)',
+                # SE patterns like "BS (SE) - 4A"
+                r'(BS\s*\([A-Z]{2}\)\s*-\s*[0-9A-Z]+)',
+                # SS patterns like "BS (SS) - 5"
+                r'(BS\s*\([A-Z]{2}\)\s*-\s*\d+)',
+                # PM patterns with additional qualifiers like "MS (PM) - 1 A Core", "MS (PM) - 2 A & 3 A Elective"
+                r'(MS\s*\([A-Z]{2}\)\s*-\s*[0-9A-Z]+\s*[A-Z]*(?:\s*(?:Core|Elective|&\s*\d+\s*[A-Z]*\s*Elective))?)',
+                # Generic fallback for any pattern
+                r'([A-Z]{2,4}\s*(?:\([A-Z]{2,4}\))?\s*-\s*[0-9A-Z]+(?:\s*[A-Z]+)?)',
+            ]
             
-            # Extract course code (e.g., "CSC 3202", "CSCL 3105")
-            course_match = re.search(r'\b([A-Z]{2,4}L?\s*\d{2,4})\b', line)
-            course = course_match.group(1) if course_match else None
+            semester = None
+            for pattern in semester_patterns:
+                semester_match = re.search(pattern, line)
+                if semester_match:
+                    semester = semester_match.group(1).strip()
+                    logger.debug(f"✅ Found semester: {semester}")
+                    break
             
-            # Extract course title (between course code and faculty name)
+            # Extract course code - Enhanced for ALL course code formats INCLUDING DASHES
+            course_patterns = [
+                r'\b([A-Z]{2,4}L?\s*TE\d{2})\b',          # Special codes like "HR TE11", "PM TE03"
+                r'\b([A-Z]{2,4}L?\s*-?\s*\d{2,4})\b',     # Standard codes with optional dash: "BE-5105", "CSC 3202", "BE 5101"
+                r'\b([A-Z]{2,3}\s*-?\s*\d{2,4})\b',       # Short codes with optional dash: "MD-2323", "MD 2323"
+            ]
+            
+            course = None
+            for pattern in course_patterns:
+                course_match = re.search(pattern, line)
+                if course_match:
+                    course = course_match.group(1).strip()
+                    break
+            
+            # Extract course title - FIXED to handle "/" properly and NOT pick and choose
             course_title = None
             if course_match:
-                # Look for text after course code until we hit faculty name or time pattern
                 after_course = line[course_match.end():].strip()
-                # Course title is usually before faculty name 
-                # Pattern: "Lab: Data Structures and Algorithms (0,1) Sidra Safdar"
-                title_match = re.search(r'^([^()]*(?:\([0-9,]+\))?)\s+([A-Z])', after_course)
-                if title_match:
-                    course_title = title_match.group(1).strip()
-                    # Clean up course title - remove trailing numbers and parentheses
-                    course_title = re.sub(r'\s*\([0-9,]+\)\s*$', '', course_title).strip()
-            
-            # Extract faculty name (between course title and room/time)
-            faculty_patterns = [
-                # Pattern 1: After course title/credits, before room/time 
-                # "...algorithms (3,0) TAUQEER AHMAD 205 08:00"
-                r'\([0-9,]+\)\s+([A-Z][A-Za-z\s]+?)\s+(?:\d+|Hall|NB-|Lab|\d{1,2}:\d{2})',
-                # Pattern 2: After course title, before room/time (no credits)
-                # "...algorithms Haroon Siddique 305 09:30"  
-                r'(?:algorithms|systems|mining|engineering|programming|studies|languages?|organization)\s+([A-Z][A-Za-z\s]+?)\s+(?:\d+|Hall|NB-|Lab|\d{1,2}:\d{2})',
-                # Pattern 3: Common pattern with dash separator
-                # "Sarwat Nadeem -  Lab 05"
-                r'\)\s+([A-Z][A-Za-z\s]+?)\s*-\s+(?:\d+|Hall|NB-|Lab)',
-                # Pattern 4: Faculty name before room number
-                r'\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*)\s+(?:Hall\s+\d+|NB-\d+|Lab\s+\d+|\d{3})\s+\d{1,2}:\d{2}',
-                # Pattern 5: All caps name (sometimes used for faculty)
-                r'\b([A-Z]{2,}\s+[A-Z]{2,})\s+(?:\d+|Hall|NB-|Lab|\d{1,2}:\d{2})',
-            ]
-            
-            faculty = None
-            for pattern in faculty_patterns:
-                faculty_match = re.search(pattern, line)
-                if faculty_match:
-                    potential_faculty = faculty_match.group(1).strip()
-                    # Filter out common non-faculty words
-                    if not re.match(r'^(Lab|Hall|Room|AM|PM|SZABIST|University|Campus|Design|Analysis|Data|Computer|Assembly)$', potential_faculty, re.IGNORECASE):
-                        faculty = potential_faculty
+                
+                # For titles with "/", capture the ENTIRE title, don't split
+                # Pattern: Look for everything until faculty name or time
+                title_patterns = [
+                    # Pattern 1: Title with credits in parentheses before faculty
+                    r'^([^()]+(?:\([0-9,]+\))?)\s+(?:Dr\.|Prof\.|Mr\.|Ms\.|[A-Z][a-z]+\s+[A-Z][a-z]+)',
+                    # Pattern 2: Title until faculty name (multiple words starting with capital)
+                    r'^([^()]+?)\s+(?:[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:\d{3}|Hall|Lab|\d{1,2}:\d{2})',
+                    # Pattern 3: Title until room/time
+                    r'^([^()]+?)\s+(?:\d{3}|Hall|Lab|\d{1,2}:\d{2})',
+                    # Pattern 4: Title with multiple "/" segments - capture ALL
+                    r'^([^()]+(?:/[^()]+)*?)(?:\s*\([0-9,]+\))?\s+(?:Dr\.|Prof\.|[A-Z][a-z]+)',
+                    # Pattern 5: Everything until first proper name or room
+                    r'^([^()]+?)(?:\s+(?:[A-Z][a-z]+\s+[A-Z][a-z]+|Dr\.|Prof\.)|\s+\d{3}|\s+Hall|\s+Lab)',
+                ]
+                
+                for pattern in title_patterns:
+                    title_match = re.search(pattern, after_course)
+                    if title_match:
+                        course_title = title_match.group(1).strip()
                         break
+                
+                # Clean up course title - remove trailing punctuation but keep "/"
+                if course_title:
+                    course_title = re.sub(r'\s*\([0-9,]+\)\s*$', '', course_title).strip()
+                    course_title = re.sub(r'[-/\s]+$', '', course_title).strip()
+                    # If title is too short and has "/", it might be incomplete - try to get more
+                    if '/' in course_title and len(course_title.split('/')[0].strip()) < 3:
+                        # Try to get a longer title
+                        extended_match = re.search(r'^([^()]+(?:/[^()]+)*)', after_course)
+                        if extended_match:
+                            extended_title = extended_match.group(1).strip()
+                            if len(extended_title) > len(course_title):
+                                course_title = extended_title
             
-            # Extract time (enhanced to handle split patterns)
-            time_patterns = [
-                # Standard format: "08:00 AM - 09:30 AM"
-                r'(\d{1,2}:\d{2}\s*[AP]M\s*(?:-|–|—)\s*\d{1,2}:\d{2}\s*[AP]M)',
-                # Split format: "01 B 08:00 AM - 09:30 AM" (room and time together)
-                r'(?:Hall|Lab|NB-|\d{2,3})\s+(?:\d+\s+)?[A-Z]?\s*(\d{1,2}:\d{2}\s*[AP]M\s*(?:-|–|—)\s*\d{1,2}:\d{2}\s*[AP]M)',
-                # Split across words: "08:00 AM - 09:30 AM"  
-                r'(\d{1,2}:\d{2}\s*[AP]M(?:\s*(?:-|–|—)\s*\d{1,2}:\d{2}\s*[AP]M)?)',
-            ]
+            # Extract faculty name - Enhanced for ALL name formats
+            faculty = None
+            if not is_cancelled:
+                faculty_patterns = [
+                    # Pattern 1: "Dr. Faculty Name" (with title)
+                    r'\b(Dr\.\s+[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z-]+)*)\s+(?:-\s+)?(?:\d{3}|Hall|Lab|\d{1,2}:\d{2}|Cancelled)',
+                    # Pattern 2: Faculty name before room/time (no title) - at least 2 words, handle mixed case
+                    r'\b([A-Z][a-z]+\s+[A-Za-z][a-z]*(?:\s+[A-Z][a-z]+)*)\s+(?:-\s+)?(?:\d{3}|Hall|Lab|\d{1,2}:\d{2})',
+                    # Pattern 3: Faculty name before "Cancelled"
+                    r'\b([A-Z][a-z]+(?:\s+[A-Z]\.?)?(?:\s+[A-Z][a-z]+)*)\s+Cancelled',
+                    # Pattern 4: After credits pattern
+                    r'\([0-9,]+\)\s+([A-Z][A-Za-z\s]+?)\s+(?:-\s+)?(?:\d{3}|Hall|NB-|Lab|\d{1,2}:\d{2})',
+                    # Pattern 5: Single name patterns (for cases where only last name is given)
+                    r'\b([A-Z][a-z]{3,})\s+(?:-\s+)?(?:\d{3}|Hall|Lab|\d{1,2}:\d{2})',
+                ]
+                
+                for pattern in faculty_patterns:
+                    faculty_match = re.search(pattern, line)
+                    if faculty_match:
+                        potential_faculty = faculty_match.group(1).strip()
+                        # Filter out common non-faculty words
+                        exclude_words = ['Hall', 'Lab', 'Room', 'AM', 'PM', 'SZABIST', 'University', 'Campus', 
+                                       'Design', 'Analysis', 'Data', 'Computer', 'Assessment', 'Techniques',
+                                       'Management', 'Development', 'Research', 'International', 'Strategic',
+                                       'Marketing', 'Accounting', 'Business', 'Applied', 'Introduction',
+                                       'Fundamentals', 'Advanced', 'Principles', 'Ethics', 'Corporate']
+                        if not any(word in potential_faculty for word in exclude_words):
+                            faculty = potential_faculty
+                            break
+            else:
+                # For cancelled classes, try to extract faculty before "Cancelled"
+                # Enhanced to handle full names like "Dr. Muhammad Abo-Ul-Hassan Rashid"
+                cancelled_faculty_patterns = [
+                    r'(Dr\.\s+[A-Za-z\-\s\.]+?)\s+Cancelled',  # Dr. Full Name Cancelled
+                    r'(Prof\.\s+[A-Za-z\-\s\.]+?)\s+Cancelled',  # Prof. Full Name Cancelled  
+                    r'([A-Z][a-z]+(?:\s+[A-Za-z\-]+)*)\s+Cancelled',  # Name Cancelled (no title)
+                ]
+                
+                faculty = "CANCELLED"  # Default value
+                
+                for pattern in cancelled_faculty_patterns:
+                    cancelled_faculty_match = re.search(pattern, line, re.IGNORECASE)
+                    if cancelled_faculty_match:
+                        potential_faculty = cancelled_faculty_match.group(1).strip()
+                        # Make sure it's not just the word "Cancelled" itself
+                        if potential_faculty.lower() != 'cancelled' and len(potential_faculty) > 3:
+                            faculty = potential_faculty
+                            break
             
+            # Extract time - Enhanced to handle various formats
             time = None
-            for pattern in time_patterns:
-                time_match = re.search(pattern, line)
+            if not is_cancelled:
+                time_patterns = [
+                    # Standard format: "08:00 AM - 09:30 AM"  
+                    r'(\d{1,2}:\d{2}\s*[AP]M\s*(?:-|–|—)\s*\d{1,2}:\d{2}\s*[AP]M)',
+                    # Single time: "08:00 AM"
+                    r'(\d{1,2}:\d{2}\s*[AP]M)',
+                ]
+                
+                for pattern in time_patterns:
+                    time_match = re.search(pattern, line)
+                    if time_match:
+                        time = time_match.group(1).strip()
+                        time = re.sub(r'\s+', ' ', time)  # Clean up spacing
+                        break
+            else:
+                # For cancelled classes, time might be on a separate line or after date
+                time_match = re.search(r'(\d{1,2}:\d{2}\s*[AP]M\s*(?:-|–|—)\s*\d{1,2}:\d{2}\s*[AP]M)', line)
                 if time_match:
-                    time = time_match.group(1) if len(time_match.groups()) > 0 else time_match.group(0)
-                    time = re.sub(r'\s+', ' ', time.strip())  # Clean up spacing
-                    break
+                    time = time_match.group(1).strip()
+                else:
+                    time = "CANCELLED"
             
-            # Extract room (usually before time, can be "Hall 01 A", "NB-206", "305", "Lab 02")
-            room_patterns = [
-                r'\b(Hall\s+\d+\s*[A-Z]?)\s+\d{1,2}:\d{2}',  # "Hall 01 A"
-                r'\b(NB-\d+)\s+\d{1,2}:\d{2}',               # "NB-206"
-                r'\b(Lab\s+\d+)\s+\d{1,2}:\d{2}',            # "Lab 02"
-                r'\b(\d{3})\s+\d{1,2}:\d{2}',                # "305"
-            ]
-            
+            # Extract room - Enhanced to handle various formats
             room = None
-            for pattern in room_patterns:
-                room_match = re.search(pattern, line)
-                if room_match:
-                    room = room_match.group(1).strip()
-                    break
+            if not is_cancelled:
+                room_patterns = [
+                    r'\b(TV\s+Studio)\b',             # "TV Studio"
+                    r'\b(Media\s+Lab)\b',             # "Media Lab"  
+                    r'\b(Digital\s+Lab)\b',           # "Digital Lab"
+                    r'\b(Hall\s+\d+\s*[A-Z]?)\b',    # "Hall 01 A"
+                    r'\b(NB-\d+)\b',                  # "NB-206"
+                    r'\b(Lab\s+\d+)\b',               # "Lab 02" 
+                    r'\b(\d{3})\s+\d{1,2}:\d{2}',    # "305" before time
+                    r'\s(\d{3})\s',                   # "305" with spaces
+                ]
+                
+                for pattern in room_patterns:
+                    room_match = re.search(pattern, line)
+                    if room_match:
+                        room = room_match.group(1).strip()
+                        break
+            else:
+                room = "CANCELLED"
             
             # Extract campus (usually at the end)
+            campus = None
             campus_match = re.search(r'(SZABIST[^$]+)$', line)
-            campus = campus_match.group(1).strip() if campus_match else None
+            if campus_match:
+                campus = campus_match.group(1).strip()
+            elif not is_cancelled:
+                campus = "SZABIST University Campus"  # Default campus
+            else:
+                campus = "CANCELLED"
+            
+            # Determine program from semester pattern
+            program = None
+            if semester:
+                if semester.startswith('BS'):
+                    program = 'BS'
+                elif semester.startswith('MS'):
+                    program = 'MS' 
+                elif semester.startswith('PhD'):
+                    program = 'PhD'
+                elif 'EMBA' in semester or 'PMBA' in semester or 'MBA' in semester:
+                    program = 'MBA'
+                elif semester.startswith('BBA'):
+                    program = 'BBA'
+                elif semester.startswith('MMS'):
+                    program = 'MMS'
+                elif 'MHRM' in semester:
+                    program = 'MHRM'
+                elif 'MPM' in semester:
+                    program = 'MPM'
+                else:
+                    program = 'Unknown'
             
             # Create the parsed item
             parsed_item = {
                 'sr_no': sr_no,
                 'dept': dept,
-                'program': 'BS',  # Most are BS programs
+                'program': program,
                 'semester': semester,
                 'course': course,
                 'course_title': course_title,
@@ -313,69 +441,20 @@ class AdvancedTableParser:
                 'raw_line': line[:100] + ('...' if len(line) > 100 else '')  # For debugging
             }
             
-            # Only return if we have the essential fields
-            if semester and course:
-                logger.debug(f"✅ Successfully parsed: {course} - {semester} - {time}")
+            # Special handling for cancelled classes - still return them but mark as cancelled
+            if is_cancelled and semester and course:
+                logger.info(f"⚠️ Cancelled class parsed: {course} - {semester} - {faculty}")
+                return parsed_item
+            elif semester and course:
+                logger.debug(f"✅ Successfully parsed: {course} - {semester} - Faculty: {faculty} - Time: {time}")
                 return parsed_item
             else:
                 logger.debug(f"❌ Missing essential fields - semester: {semester}, course: {course}")
                 return None
                 
         except Exception as e:
-            logger.warning(f"❌ Failed to parse line: {line[:50]}... Error: {e}")
+            logger.warning(f"❌ Failed to parse entry: {line[:50]}... Error: {e}")
             return None
-            room_match = re.search(r'\b(\d{3}|Lab\s*\d+|Hall\s*\d+\s*[A-Z]?|NB-\d+|Digital\s*Lab)\b', line)
-            campus_match = re.search(r'(SZABIST\s+(?:University\s+Campus|HMB))', line)
-            
-            # Extract faculty name (improved pattern)
-            faculty_name = None
-            if course_match:
-                # Look for name after course title pattern
-                after_course = line[course_match.end():].strip()
-                # Pattern: ") Faculty Name Room/Time"
-                faculty_match = re.search(r'\)\s+([A-Z][a-z]+(?:\s+[A-Z]\.?)?(?:\s+[A-Z][a-z]+)*)', after_course)
-                if not faculty_match:
-                    # Alternative pattern: look for capitalized names
-                    faculty_match = re.search(r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]*)*(?:\s+[A-Z][a-z]+))\b', after_course)
-                if faculty_match:
-                    faculty_name = faculty_match.group(1).strip()
-                    # Clean faculty name (remove room numbers that might be captured)
-                    faculty_name = re.sub(r'\b\d{3}\b', '', faculty_name).strip()
-            
-            # Extract course title (between course code and credits/faculty)
-            course_title = None
-            if course_match:
-                after_course = line[course_match.end():].strip()
-                # Look for text before credits pattern (x,y) or faculty
-                title_match = re.search(r'^([^(]+?)\s*(?:\([0-9,]+\)|[A-Z][a-z])', after_course)
-                if title_match:
-                    course_title = title_match.group(1).strip()
-            
-            row = {
-                'sr_no': sr_match.group(1) if sr_match else None,
-                'dept': dept_match.group(1) if dept_match else None,
-                'program': program_match.group(1) if program_match else None,
-                'semester': semester_match.group(1) if semester_match else None,
-                'course_code': course_match.group(1) if course_match else None,
-                'course_title': course_title,
-                'faculty': faculty_name,
-                'room': room_match.group(1) if room_match else None,
-                'time': time_match.group(1) if time_match else None,
-                'campus': campus_match.group(1) if campus_match else None,
-            }
-            
-            logger.debug(f"✅ Parsed: {row}")
-            
-            # Only return if we have essential data
-            if row['course_code'] and row['semester']:
-                return row
-            else:
-                logger.debug(f"❌ Missing essential data: course={row['course_code']}, semester={row['semester']}")
-                
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to parse line: {line[:50]}... Error: {e}")
-            
-        return None
     
     def normalize_column_headers(self, df: pd.DataFrame) -> pd.DataFrame:
         """Normalize and map column headers to standard names"""
@@ -462,6 +541,10 @@ class AdvancedTableParser:
         # Fix parentheses
         normalized = re.sub(r'[\(\)]+', lambda m: '(' if '(' in m.group() else ')', normalized)
         
+        # DO NOT normalize MSS to MS(SS) - they are different semesters!
+        # MSS - 1 and MS(SS) - 1 are separate semesters that share classes
+        # We need to preserve both as distinct semester identities
+        
         return normalized
     
     def _semester_matches(self, semester_cell: str, target_semester: str) -> bool:
@@ -476,6 +559,20 @@ class AdvancedTableParser:
         if cell_normalized == target_normalized:
             return True
         
+        # Handle slash-separated semesters (e.g., "EMBA - 1 / PMBA - 1")
+        if '/' in cell_normalized:
+            # Split by slash and check each part
+            semester_parts = [part.strip() for part in cell_normalized.split('/')]
+            for part in semester_parts:
+                part_normalized = self._normalize_semester(part)
+                if part_normalized == target_normalized:
+                    return True
+                # Check compact format only for exact semester variations (spacing)
+                part_compact = re.sub(r'\s+', '', part_normalized)
+                target_compact = re.sub(r'\s+', '', target_normalized)
+                if part_compact == target_compact:
+                    return True
+        
         # Handle common variations and data errors
         # BS(CS) - 5B might appear as BS(AI) - 5B in email (data error)
         if target_normalized == "BS(CS) - 5B" and cell_normalized == "BS(AI) - 5B":
@@ -483,44 +580,117 @@ class AdvancedTableParser:
         if target_normalized == "BS(AI) - 5B" and cell_normalized == "BS(CS) - 5B":
             return True
             
-        # Flexible matching for spacing variations
+        # Flexible matching for spacing variations ONLY (no similarity matching)
         cell_compact = re.sub(r'\s+', '', cell_normalized)
         target_compact = re.sub(r'\s+', '', target_normalized)
         if cell_compact == target_compact:
             return True
         
-        # Similarity matching
-        similarity = self.similarity(cell_normalized, target_normalized)
-        return similarity > 0.85
+        # Remove similarity matching to prevent false matches between EMBA/PMBA
+        return False
     
-    def extract_schedule_data(self, df: pd.DataFrame) -> List[Dict]:
+    def _extract_matching_semester(self, semester_cell: str, target_semesters: List[str]) -> str:
+        """Extract the specific matching semester from a slash-separated string"""
+        if not semester_cell or not target_semesters:
+            return semester_cell
+        
+        cell_normalized = self._normalize_semester(str(semester_cell))
+        
+        # If no slash, return as is
+        if '/' not in cell_normalized:
+            return semester_cell
+        
+        # Split by slash and find the matching part
+        semester_parts = [part.strip() for part in cell_normalized.split('/')]
+        
+        for target in target_semesters:
+            target_normalized = self._normalize_semester(target)
+            target_compact = re.sub(r'\s+', '', target_normalized)
+            
+            for part in semester_parts:
+                part_normalized = self._normalize_semester(part)
+                part_compact = re.sub(r'\s+', '', part_normalized)
+                
+                # Check for exact match or compact match
+                if (part_normalized == target_normalized or 
+                    part_compact == target_compact):
+                    return part  # Return the matching part
+        
+        # If no specific match found, return original
+        return semester_cell
+    
+    def extract_schedule_data(self, df: pd.DataFrame, target_semesters: List[str] = None) -> List[Dict]:
         """Extract schedule data from normalized dataframe"""
         schedule_items = []
         
         for idx, row in df.iterrows():
             try:
-                # Extract data with fallbacks
-                item = {
-                    'sr_no': self._safe_extract(row, ['sr_no', 'sr', 'serial', 0]),
-                    'dept': self._safe_extract(row, ['dept', 'department']),
-                    'program': self._safe_extract(row, ['program']),
-                    'semester': self._safe_extract(row, ['semester', 'class', 'section']),
-                    'course': self._safe_extract(row, ['course_code', 'course', 'subject']),
-                    'course_title': self._safe_extract(row, ['course_title', 'title', 'name']),
-                    'faculty': self._safe_extract(row, ['faculty', 'teacher', 'instructor']),
-                    'room': self._safe_extract(row, ['room', 'venue', 'location']),
-                    'time': self._safe_extract(row, ['time', 'timing', 'schedule']),
-                    'campus': self._safe_extract(row, ['campus', 'location']),
-                    'credits': self._safe_extract(row, ['credits', 'cr']),
-                }
+                # Extract semester first to check for slash-separated values
+                raw_semester = self._safe_extract(row, ['semester', 'class', 'section'])
                 
-                # Clean and validate data
-                item = self._clean_extracted_data(item)
+                # Determine which semesters to create entries for
+                semesters_to_create = []
                 
-                # Only add if we have essential data
-                if item.get('course') and item.get('semester'):
-                    schedule_items.append(item)
-                    logger.debug(f"✅ Extracted: {item['course']} for {item['semester']}")
+                if target_semesters and raw_semester:
+                    # Check if this is a combined semester that matches multiple targets
+                    raw_normalized = self._normalize_semester(str(raw_semester))
+                    
+                    if '/' in raw_normalized:
+                        # Split by slash and check each part - treat each as a separate semester
+                        semester_parts = [part.strip() for part in raw_normalized.split('/')]
+                        
+                        for target in target_semesters:
+                            target_normalized = self._normalize_semester(target)
+                            target_compact = re.sub(r'\s+', '', target_normalized)
+                            
+                            for part in semester_parts:
+                                part_normalized = self._normalize_semester(part)
+                                part_compact = re.sub(r'\s+', '', part_normalized)
+                                
+                                # Check for exact match or compact match
+                                if (part_normalized == target_normalized or 
+                                    part_compact == target_compact):
+                                    # Keep the original part (not normalized) to preserve semester identity
+                                    # This allows both "MS(SS) - 1" and "MSS - 1" to be distinct
+                                    if part.strip() not in semesters_to_create:
+                                        semesters_to_create.append(part.strip())
+                                    break
+                    else:
+                        # Single semester, check if it matches any target
+                        filtered_semester = self._extract_matching_semester(raw_semester, target_semesters)
+                        if filtered_semester:
+                            semesters_to_create.append(filtered_semester)
+                else:
+                    # No filtering, use original semester
+                    semesters_to_create.append(raw_semester)
+                
+                # Create an entry for each matching semester
+                for semester in semesters_to_create:
+                    if not semester:
+                        continue
+                        
+                    # Extract data with fallbacks
+                    item = {
+                        'sr_no': self._safe_extract(row, ['sr_no', 'sr', 'serial', 0]),
+                        'dept': self._safe_extract(row, ['dept', 'department']),
+                        'program': self._safe_extract(row, ['program']),
+                        'semester': semester,
+                        'course': self._safe_extract(row, ['course_code', 'course', 'subject']),
+                        'course_title': self._safe_extract(row, ['course_title', 'title', 'name']),
+                        'faculty': self._safe_extract(row, ['faculty', 'teacher', 'instructor']),
+                        'room': self._safe_extract(row, ['room', 'venue', 'location']),
+                        'time': self._safe_extract(row, ['time', 'timing', 'schedule']),
+                        'campus': self._safe_extract(row, ['campus', 'location']),
+                        'credits': self._safe_extract(row, ['credits', 'cr']),
+                    }
+                    
+                    # Clean and validate data
+                    item = self._clean_extracted_data(item)
+                    
+                    # Only add if we have essential data
+                    if item.get('course') and item.get('semester'):
+                        schedule_items.append(item)
+                        logger.debug(f"✅ Extracted: {item['course']} for {item['semester']}")
                 
             except Exception as e:
                 logger.warning(f"⚠️ Failed to extract row {idx}: {e}")
@@ -555,6 +725,49 @@ class AdvancedTableParser:
         if item.get('course'):
             item['course'] = re.sub(r'\s+', ' ', item['course']).strip()
         
+        # Clean contaminated course titles
+        if item.get('course_title'):
+            course_title = str(item['course_title']).strip()
+            
+            # Remove trailing "Dr." or other faculty titles that got appended
+            # This handles cases like "Theories of International Relations Dr." 
+            # and "Quantitative Analysis for Decision Making Dr. Muhammad Shoaib"
+            trailing_faculty_pattern = r'\s+(Dr\.?|Prof\.?|Mr\.?|Ms\.?|Miss)\.?(?:\s+[A-Za-z\s\.]+)?$'
+            course_title = re.sub(trailing_faculty_pattern, '', course_title, flags=re.IGNORECASE)
+            
+            # Remove faculty names from course title (Dr., Prof., Mr., Ms., etc.)
+            # Look for patterns like "Course Title Dr. Name" or "Course Title / Additional Course Dr. Name"
+            faculty_pattern = r'\s+(Dr\.?|Prof\.?|Mr\.?|Ms\.?|Miss)\s+[A-Za-z\s\.]+$'
+            course_title = re.sub(faculty_pattern, '', course_title, flags=re.IGNORECASE)
+            
+            # Remove additional course codes that got mixed in (e.g., "/ BA 5322 Financial Accounting...")
+            # Pattern: "/ [A-Z]{2,4} \d{4} ..."
+            additional_course_pattern = r'\s*/\s*[A-Z]{2,4}\s*\d{4}.*'
+            course_title = re.sub(additional_course_pattern, '', course_title)
+            
+            # Clean up extra slashes and spaces
+            course_title = re.sub(r'\s*/\s*$', '', course_title)  # Remove trailing slash
+            course_title = re.sub(r'\s+', ' ', course_title).strip()  # Normalize spaces
+            
+            # If the title is too short (likely truncated), try to reconstruct from raw_line
+            if len(course_title) < 5 and item.get('raw_line'):
+                extracted_title = self._extract_course_title_from_raw(item['raw_line'], item.get('course', ''))
+                if extracted_title and len(extracted_title) > len(course_title):
+                    course_title = extracted_title
+            
+            item['course_title'] = course_title if course_title else None
+        
+        # Clean faculty names
+        if item.get('faculty'):
+            faculty = str(item['faculty']).strip()
+            # Remove "CANCELLED" from faculty field
+            if faculty.upper() == 'CANCELLED':
+                item['faculty'] = 'CANCELLED'
+            else:
+                # Normalize faculty names
+                faculty = re.sub(r'\s+', ' ', faculty).strip()
+                item['faculty'] = faculty
+        
         # Normalize times
         if item.get('time'):
             time_str = item['time']
@@ -569,6 +782,45 @@ class AdvancedTableParser:
                 item['campus'] = 'SZABIST University Campus'
         
         return item
+    
+    def _extract_course_title_from_raw(self, raw_line: str, course_code: str) -> str:
+        """Extract course title from raw line when the parsed title is truncated"""
+        if not raw_line or not course_code:
+            return ""
+        
+        try:
+            # Look for pattern: "COURSE_CODE Full Course Title (credits)" 
+            # More flexible pattern to handle various formats
+            patterns = [
+                rf'{re.escape(course_code)}\s+([^(]+?)\s*\([^)]+\)',  # Standard format
+                rf'{re.escape(course_code)}\s+([^/]+?)(?:\s*/|\s+(?:Dr\.|Prof\.|Mr\.|Ms\.))',  # Before slash or faculty
+                rf'{re.escape(course_code)}\s+(.+?)(?:\s+\(\d+,\d+\))',  # Before credits pattern
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, raw_line, re.IGNORECASE)
+                if match:
+                    title = match.group(1).strip()
+                    
+                    # Clean up the title
+                    # Remove credits info that might be included
+                    title = re.sub(r'\s*\(\d+,\d+\).*', '', title)
+                    
+                    # Remove faculty names
+                    faculty_pattern = r'\s+(Dr\.?|Prof\.?|Mr\.?|Ms\.?)\s+[A-Za-z\s\.]+$'
+                    title = re.sub(faculty_pattern, '', title, flags=re.IGNORECASE)
+                    
+                    # Clean up extra spaces and slashes
+                    title = re.sub(r'\s+', ' ', title).strip()
+                    title = re.sub(r'\s*/\s*$', '', title)  # Remove trailing slash
+                    
+                    if len(title) > 3:  # Only return if we got a meaningful title
+                        return title
+                        
+        except Exception as e:
+            logger.debug(f"Failed to extract title from raw line: {e}")
+            
+        return ""
     
     def parse_timetable(self, html_content: str, target_semesters: List[str] = None) -> List[Dict]:
         """Main method to parse timetable from HTML"""
@@ -608,7 +860,7 @@ class AdvancedTableParser:
                     continue
                 
                 # Extract schedule data
-                schedule_items = self.extract_schedule_data(filtered_table)
+                schedule_items = self.extract_schedule_data(filtered_table, target_semesters)
                 all_schedule_items.extend(schedule_items)
                 
                 logger.info(f"✅ Table {i+1}: Extracted {len(schedule_items)} schedule items")

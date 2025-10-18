@@ -1,28 +1,64 @@
 import React from 'react';
-import { TimetableData, ConfigData } from '../../types/api';
+import { TimetableData, ConfigData, TimetableItem } from '../../types/api';
 
 interface SummaryStatsProps {
   data: TimetableData;
   config?: ConfigData;
+  filteredItems?: TimetableItem[];
 }
 
-const SummaryStats: React.FC<SummaryStatsProps> = ({ data, config }) => {
+const SummaryStats: React.FC<SummaryStatsProps> = ({ data, config, filteredItems }) => {
   if (!data || !data.summary) {
     return null;
   }
 
-  const summary = data.summary;
-  
   // Check if no semesters are configured
   const noSemestersConfigured = !config?.semester_filter || config.semester_filter.length === 0;
   
-  // If no semesters configured, show zeros for all stats
-  const displaySummary = noSemestersConfigured ? {
-    total_items: 0,
-    unique_courses: 0,
-    unique_faculty: 0,
-    semester_breakdown: {}
-  } : summary;
+  // Use filtered items if provided, otherwise fall back to original behavior
+  const itemsToAnalyze = filteredItems || data.items || [];
+  
+  // Calculate summary based on filtered items
+  const calculateFilteredSummary = () => {
+    if (noSemestersConfigured || itemsToAnalyze.length === 0) {
+      return {
+        total_items: 0,
+        unique_courses: 0,
+        unique_faculty: 0,
+        semester_breakdown: {}
+      };
+    }
+
+    const semesterBreakdown: Record<string, number> = {};
+    const uniqueCourses = new Set<string>();
+    const uniqueFaculty = new Set<string>();
+
+    itemsToAnalyze.forEach(item => {
+      // Count semester breakdown
+      if (item.semester) {
+        semesterBreakdown[item.semester] = (semesterBreakdown[item.semester] || 0) + 1;
+      }
+      
+      // Count unique courses
+      if (item.course_code) {
+        uniqueCourses.add(item.course_code);
+      }
+      
+      // Count unique faculty
+      if (item.faculty && item.faculty.toLowerCase() !== 'cancelled' && item.faculty.toLowerCase() !== 'tbd') {
+        uniqueFaculty.add(item.faculty);
+      }
+    });
+
+    return {
+      total_items: itemsToAnalyze.length,
+      unique_courses: uniqueCourses.size,
+      unique_faculty: uniqueFaculty.size,
+      semester_breakdown: semesterBreakdown
+    };
+  };
+
+  const displaySummary = calculateFilteredSummary();
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
