@@ -6,6 +6,7 @@ import os
 import sys
 import json
 import logging
+import socket
 from datetime import datetime
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -37,6 +38,21 @@ logging.getLogger('database.supabase_client').setLevel(logging.WARNING)
 from scraper.scheduler import run_once
 from scraper.config import settings
 from database.supabase_client import supabase_manager
+
+def get_local_ip():
+    """Get the local IP address dynamically"""
+    try:
+        # Connect to a dummy address to get the local IP
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+
+# Dynamic network configuration
+LOCAL_IP = get_local_ip()
+FRONTEND_PORT = int(os.environ.get('FRONTEND_PORT', 3000))
+BACKEND_PORT = int(os.environ.get('PORT', 5000))
 
 def get_user_from_request():
     """Extract user email from request headers or JSON"""
@@ -82,10 +98,10 @@ def oauth_config_info():
     try:
         # Show what redirect URI would be generated
         origin = request.headers.get('Origin', '')
-        host = request.headers.get('Host', 'localhost:5000')
+        host = request.headers.get('Host', f'localhost:{BACKEND_PORT}')
         
         if '192.168.' in origin:
-            redirect_host = origin.split('://')[1].split(':')[0] + ':5000'
+            redirect_host = origin.split('://')[1].split(':')[0] + f':{BACKEND_PORT}'
             redirect_uri = f'http://{redirect_host}/api/auth/gmail/callback'
         else:
             redirect_uri = 'http://localhost:5000/api/auth/gmail/callback'
@@ -290,16 +306,16 @@ def gmail_callback():
         logger.info(f"Saved Gmail tokens for user: {user_email}")
         
         # Get frontend URL dynamically based on referrer or request origin
-        frontend_url = 'http://localhost:3000'  # default
+        frontend_url = f'http://localhost:{FRONTEND_PORT}'  # default
         
         # Check referer header to determine frontend origin
         referer = request.headers.get('Referer', '')
         user_agent = request.headers.get('User-Agent', '')
         
-        if '192.168.100.250' in referer:
-            frontend_url = 'http://192.168.100.250:3000'
+        if LOCAL_IP in referer:
+            frontend_url = f'http://{LOCAL_IP}:{FRONTEND_PORT}'
         elif 'localhost:3000' in referer or '127.0.0.1:3000' in referer:
-            frontend_url = 'http://localhost:3000'
+            frontend_url = f'http://localhost:{FRONTEND_PORT}'
         
         # Check if this is a mobile browser (Safari, iOS, etc.)
         is_mobile = any(mobile_agent in user_agent.lower() for mobile_agent in 
@@ -341,7 +357,7 @@ def gmail_callback():
             const targetOrigins = [
                 'http://localhost:3000',
                 'http://127.0.0.1:3000', 
-                'http://192.168.100.250:3000'
+                'http://{LOCAL_IP}:{FRONTEND_PORT}'
             ];
             
             const message = {{
@@ -370,17 +386,17 @@ def gmail_callback():
     except Exception as e:
         logger.error(f"Gmail callback error: {e}")
         
-        # Get frontend URL dynamically based on referrer or request origin
-        frontend_url = 'http://localhost:3000'  # default
+        # Get frontend URL for redirect
+        frontend_url = f'http://localhost:{FRONTEND_PORT}'  # default
         
         # Check referer header to determine frontend origin
         referer = request.headers.get('Referer', '')
         user_agent = request.headers.get('User-Agent', '')
         
-        if '192.168.100.250' in referer:
-            frontend_url = 'http://192.168.100.250:3000'
+        if LOCAL_IP in referer:
+            frontend_url = f'http://{LOCAL_IP}:{FRONTEND_PORT}'
         elif 'localhost:3000' in referer or '127.0.0.1:3000' in referer:
-            frontend_url = 'http://localhost:3000'
+            frontend_url = f'http://localhost:{FRONTEND_PORT}'
         
         # Check if this is a mobile browser
         is_mobile = any(mobile_agent in user_agent.lower() for mobile_agent in 
@@ -420,7 +436,7 @@ def gmail_callback():
         const targetOrigins = [
             'http://localhost:3000',
             'http://127.0.0.1:3000', 
-            'http://192.168.100.250:3000'
+            'http://{LOCAL_IP}:{FRONTEND_PORT}'
         ];
         
         const message = {{
@@ -704,5 +720,5 @@ if __name__ == '__main__':
     print(f"Starting server on 0.0.0.0:{port}")
     print(f"Access URLs:")
     print(f"  Local: http://localhost:{port}")
-    print(f"  Network: http://192.168.100.250:{port}")
+    print(f"  Network: http://{LOCAL_IP}:{port}")
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)

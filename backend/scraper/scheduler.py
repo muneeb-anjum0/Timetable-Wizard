@@ -19,21 +19,8 @@ from apscheduler.triggers.cron import CronTrigger
 from dateutil import tz
 
 from .gmail_client import get_credentials, build_service, list_messages, get_message_html
-from .enhanced_parser import parse_schedule_enhanced
-
-LOGGER = logging.getLogger(__name__)
-
-WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-import os
-from datetime import datetime, timedelta
-from typing import Dict, Optional
-
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-from dateutil import tz
-
-from .gmail_client import get_credentials, build_service, list_messages, get_message_html
-from .parser import parse_schedule_html
+from .bulletproof_parser import parse_schedule_bulletproof
+from .advanced_table_parser import parse_html_with_advanced_pandas
 
 LOGGER = logging.getLogger(__name__)
 
@@ -229,22 +216,57 @@ def run_once(user_email: str = "me", show_table: bool = False, user_id: Optional
         LOGGER.info(f"Message ID: {msg_id}")
         LOGGER.info(f"HTML length: {len(html)} characters")
         if html:
-            # Show first 500 characters of HTML for debugging (commented out to reduce noise)
-            # preview = html[:500].replace('\n', '\\n').replace('\r', '\\r')
-            # LOGGER.info(f"HTML preview: {preview}...")
-            pass
+            # Show a preview of the HTML to see if it contains table data
+            preview = html[:1000].replace('\n', '\\n').replace('\r', '\\r')
+            LOGGER.info(f"HTML preview (first 1000 chars): {preview}")
+            
+            # Check if HTML contains table-related keywords
+            if '<table' in html.lower():
+                LOGGER.info("✅ HTML contains <table> elements")
+            else:
+                LOGGER.warning("❌ HTML does NOT contain <table> elements")
+                
+            if 'class' in html.lower() and 'section' in html.lower():
+                LOGGER.info("✅ HTML contains 'class' and 'section' keywords")
+            else:
+                LOGGER.warning("❌ HTML missing 'class' or 'section' keywords")
         else:
             LOGGER.warning("HTML content is empty or None")
 
         LOGGER.info(f"Parsing HTML with semester filters: {allowed_semesters}")
-        LOGGER.info("🚀 CALLING ENHANCED PARSER 🚀")
-        items = parse_schedule_enhanced(html, allowed_semesters)
-        LOGGER.info(f"🎯 ENHANCED PARSER RETURNED: {len(items)} schedule items")
+        LOGGER.info("🚀🚀🚀 USING ENHANCED MULTI-PARSER APPROACH! 🚀🚀🚀")
         
-        # Log first few items to verify enhanced parsing worked
+        # Save HTML to file for debugging purposes
+        debug_html_path = "debug_email.html"
+        try:
+            with open(debug_html_path, 'w', encoding='utf-8') as f:
+                f.write(html)
+            LOGGER.info(f"💾 DEBUG: Saved HTML to {debug_html_path}")
+        except Exception as e:
+            LOGGER.warning(f"Could not save debug HTML: {e}")
+        
+        # Try advanced pandas table parser first for robust table extraction
+        items = parse_html_with_advanced_pandas(html, allowed_semesters)
+        if items:
+            LOGGER.info(f"✅ ADVANCED PANDAS PARSER SUCCESS: {len(items)} schedule items")
+        else:
+            LOGGER.warning("🔄 ADVANCED PARSER FOUND NO ITEMS - TRYING BULLETPROOF PARSER")
+            items = parse_schedule_bulletproof(html, allowed_semesters)
+            
+            if items:
+                LOGGER.info(f"✅ BULLETPROOF PARSER SUCCESS: {len(items)} schedule items")
+            else:
+                LOGGER.warning("🔄 BULLETPROOF PARSER FOUND NO ITEMS - FALLING BACK TO ENHANCED ORIGINAL PARSER")
+                from .parser import parse_schedule_html
+                items = parse_schedule_html(html, allowed_semesters)
+                LOGGER.info(f"🔄 ENHANCED ORIGINAL PARSER RETURNED: {len(items)} schedule items")
+        
+        LOGGER.info("🔥 MULTI-PARSER APPROACH COMPLETE! 🔥")
+        
+        # Log first few items to verify bulletproof parsing worked
         for i, item in enumerate(items[:2]):
-            LOGGER.info(f"  Scheduler Item {i+1}: course='{item.get('course')}', title='{item.get('course_title')}', faculty='{item.get('faculty')}', room='{item.get('room')}'")
-        
+            LOGGER.info(f"  🔥 BULLETPROOF Item {i+1}: course='{item.get('course')}', title='{item.get('course_title')}', faculty='{item.get('faculty')}', room='{item.get('room')}'")
+            LOGGER.info(f"  🔥 BULLETPROOF Raw: {item.get('raw_cells', [])[:4]}")  # Show first 4 cells
         LOGGER.info(f"Parsed {len(items)} schedule items with enhanced validation")
 
         # Create summary statistics
